@@ -1,8 +1,9 @@
 {
   "name": "funzo",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A bunch of descriptive statistics functions",
-  "main": "funzo.js",
+  "main": "dist/funzo.js",
+  "browser": "dist/funzo.js",
   "scripts": {
     "prepublish": "tsc",
     "test": "tsc && mocha ./dist/test/test.js"
@@ -35,3 +36,4 @@
     "test": "test"
   }
 }
+

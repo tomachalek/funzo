@@ -8,11 +8,11 @@
     "test": "tsc && mocha ./dist/test/test.js"
   },
   "devDependencies": {
-    "typescript": "^1.8.10"    
-  },
-  "dependencies": {
+    "typescript": "^1.8.10",
     "chai": "~3.5.0",
     "mocha": "~2.4.5"
+  },
+  "dependencies": {
   },
   "keywords": [
     "funzo",
@@ -22,9 +22,16 @@
     "median"
   ],
   "repository": {
-    "url": "https://github.com/tomachalek/funzo.git",
+    "url": "git+https://github.com/tomachalek/funzo.git",
     "type": "git"
   },
   "author": "tomachalek",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/tomachalek/funzo/issues"
+  },
+  "homepage": "https://github.com/tomachalek/funzo#readme",
+  "directories": {
+    "test": "test"
+  }
 }

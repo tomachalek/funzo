@@ -18,7 +18,7 @@
  * A bunch of essential descriptive statistics functions
  */
 
-export class Data<T> {
+export class FunzoList<T> {
     
     private data:Array<T>;
     
@@ -156,7 +156,7 @@ export class Data<T> {
      * @param otherData
      * @returns {number}
      */
-    correl<U>(otherData:Data<U>):number {
+    correl<U>(otherData:FunzoList<U>):number {
         let len = Math.min(this.size(), otherData.size());            
         let numerator = 0;
         let denominator1 = 0;
@@ -245,7 +245,25 @@ export class Data<T> {
     }
 }
 
+export function Funzo<T>(accessorFunc:(T)=>number):(d:Array<T>)=>FunzoList<T> {
+    return (d:Array<T>) => {
+        return new FunzoList<T>(d, accessorFunc);
+    };
+}
 
-export function D<T>(data:Array<T>, accessorFunc?:(T)=>number):Data<T> {
-    return new Data(data, accessorFunc);
+export function wrapArray<T>(data:Array<T>, accessorFunc?:(T)=>number):FunzoList<T> {
+    return new FunzoList(data, accessorFunc);
+}
+
+
+export function numerize(v:any):number {
+    if (typeof v === 'number') {
+        return v;
+
+    } else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
+        return parseFloat(v);
+
+    } else {
+        return 0;
+    }
 }

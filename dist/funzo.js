@@ -15,23 +15,23 @@
  */
 "use strict";
 /**
- * This file contains orzo's library of useful functions
+ * A bunch of essential descriptive statistics functions
  */
-var Data = (function () {
-    function Data(data, accessorFunc) {
+var FunzoList = (function () {
+    function FunzoList(data, accessorFunc) {
         this.data = data;
         this.accessorFunc = accessorFunc ? accessorFunc : function (t) { return t; };
     }
-    Data.prototype.toString = function () {
+    FunzoList.prototype.toString = function () {
         return '[object Data]';
     };
-    Data.prototype.size = function () {
+    FunzoList.prototype.size = function () {
         return this.data.length;
     };
-    Data.prototype.get = function (idx) {
+    FunzoList.prototype.get = function (idx) {
         return this.accessorFunc(this.data[idx]);
     };
-    Data.prototype.set = function (idx, v) {
+    FunzoList.prototype.set = function (idx, v) {
         this.data[idx] = v;
     };
     /**
@@ -40,7 +40,7 @@ var Data = (function () {
      *
      * @param {function} fn a function with signature function (value, index)
      */
-    Data.prototype.each = function (fn) {
+    FunzoList.prototype.each = function (fn) {
         for (var i = 0; i < this.data.length; i += 1) {
             if (fn.call(this, this.get(i), i) === false) {
                 break;
@@ -52,7 +52,7 @@ var Data = (function () {
      *
      * @returns {*}
      */
-    Data.prototype.sum = function () {
+    FunzoList.prototype.sum = function () {
         var total = 0;
         for (var i = 0; i < this.size(); i += 1) {
             var x = this.get(i);
@@ -69,7 +69,7 @@ var Data = (function () {
      *
      * @returns {number}
      */
-    Data.prototype.max = function () {
+    FunzoList.prototype.max = function () {
         var maxVal = this.get(0);
         for (var i = 1; i < this.size(); i += 1) {
             var x = this.get(i);
@@ -88,7 +88,7 @@ var Data = (function () {
      *
      * @returns {number}
      */
-    Data.prototype.min = function () {
+    FunzoList.prototype.min = function () {
         var minVal = this.get(0);
         for (var i = 1; i < this.size(); i += 1) {
             var x = this.get(i);
@@ -105,7 +105,7 @@ var Data = (function () {
      * Calculates arithmetic mean of provided numbers
      *
      */
-    Data.prototype.mean = function () {
+    FunzoList.prototype.mean = function () {
         if (this.size() > 0) {
             return this.sum() / this.size();
         }
@@ -117,7 +117,7 @@ var Data = (function () {
      * @returns {*} standard deviation of the sample or NaN in case
      * the value cannot be calculated
      */
-    Data.prototype.stdev = function () {
+    FunzoList.prototype.stdev = function () {
         var mean = this.mean();
         var curr = 0;
         if (!isNaN(mean) && this.size() > 1) {
@@ -136,7 +136,7 @@ var Data = (function () {
      * @param otherData
      * @returns {number}
      */
-    Data.prototype.correl = function (otherData) {
+    FunzoList.prototype.correl = function (otherData) {
         var len = Math.min(this.size(), otherData.size());
         var numerator = 0;
         var denominator1 = 0;
@@ -160,7 +160,7 @@ var Data = (function () {
      * alters the order of the data (but does not sort them)
      * to prevent exhausting RAM.
      */
-    Data.prototype.median = function () {
+    FunzoList.prototype.median = function () {
         var self = this;
         if (this.size() === 0) {
             return NaN;
@@ -215,10 +215,28 @@ var Data = (function () {
             return m;
         }
     };
-    return Data;
+    return FunzoList;
 }());
-exports.Data = Data;
-function D(data, accessorFunc) {
-    return new Data(data, accessorFunc);
+exports.FunzoList = FunzoList;
+function Funzo(accessorFunc) {
+    return function (d) {
+        return new FunzoList(d, accessorFunc);
+    };
 }
-exports.D = D;
+exports.Funzo = Funzo;
+function wrapArray(data, accessorFunc) {
+    return new FunzoList(data, accessorFunc);
+}
+exports.wrapArray = wrapArray;
+function numerize(v) {
+    if (typeof v === 'number') {
+        return v;
+    }
+    else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
+        return parseFloat(v);
+    }
+    else {
+        return 0;
+    }
+}
+exports.numerize = numerize;

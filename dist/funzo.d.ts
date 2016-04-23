@@ -1,7 +1,7 @@
 /**
- * This file contains orzo's library of useful functions
+ * A bunch of essential descriptive statistics functions
  */
-export declare class Data<T> {
+export declare class FunzoList<T> {
     private data;
     private accessorFunc;
     constructor(data: Array<T>, accessorFunc?: (T) => number);
@@ -56,7 +56,7 @@ export declare class Data<T> {
      * @param otherData
      * @returns {number}
      */
-    correl<U>(otherData: Data<U>): number;
+    correl<U>(otherData: FunzoList<U>): number;
     /**
      * Calculates a median of the dataset. This function
      * alters the order of the data (but does not sort them)
@@ -64,4 +64,6 @@ export declare class Data<T> {
      */
     median(): number;
 }
-export declare function D<T>(data: Array<T>, accessorFunc?: (T) => number): Data<T>;
+export declare function Funzo<T>(accessorFunc: (T) => number): (d: Array<T>) => FunzoList<T>;
+export declare function wrapArray<T>(data: Array<T>, accessorFunc?: (T) => number): FunzoList<T>;
+export declare function numerize(v: any): number;

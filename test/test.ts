@@ -18,11 +18,26 @@
 /// <reference path="../typings/main/definitions/chai/index.d.ts" />
 
 import chai = require('chai');
-import { D } from  '../funzo';
+import { Funzo, wrapArray, numerize } from  '../funzo';
+
+describe('factory function Funzo()', function () {
+    
+    it('test instantiation and get()', function () {
+        let funzo = Funzo((v) => -v);
+        let values = funzo([1, 2, 3]);
+        let ans = [];
+        
+        for (let i = 0; i < 3; i += 1) {
+            ans.push(values.get(i));
+        }        
+        
+        chai.assert.deepEqual(ans, [-1, -2, -3]);
+    });
+});
 
 
 describe('each()', function () {
-    let data = D<string>(['a', 'b', 'c'], (v)=>v.charCodeAt(0));
+    let data = wrapArray<string>(['a', 'b', 'c'], (v)=>v.charCodeAt(0));
     let ans = [];
     let idx = [];
     let thisValue;
@@ -47,7 +62,7 @@ describe('each()', function () {
     });
     
     it('return false breaks iteration', function () {
-        let data = D([0, 1, 2, 3, 4]);
+        let data = wrapArray([0, 1, 2, 3, 4]);
         let ans = [];
 
         data.each(function (v, i) {
@@ -64,17 +79,17 @@ describe('each()', function () {
 describe('sum()', function () {
     it('valid result from a list of valid values', function () {
         let items = [1, 2, 3, 4.2, 5, 6.1, 7, 8, 9, 10.7];
-        chai.assert.equal(D(items).sum(), 56);
+        chai.assert.equal(wrapArray(items).sum(), 56);
     });
     
     it('empty list', function () {
         let items = [];
-        chai.assert.equal(D(items).sum(), 0);
+        chai.assert.equal(wrapArray(items).sum(), 0);
     });
 
     it('list with non numbers and NaN', function () {
         let items = ['a', 1, 2, NaN];
-        chai.assert.isOk(isNaN(D(items).sum()));
+        chai.assert.isOk(isNaN(wrapArray(items).sum()));
     }); 
 });
 
@@ -83,17 +98,17 @@ describe('sum() with accessor fn', function () {
 
     it('access to structured items with valid respective items', function () {
         let items = [['a', 1], ['b', 2], ['c', 3], ['d', 4], ['e', 5]];
-        chai.assert.equal(D(items, customAccess).sum(), 15);
+        chai.assert.equal(wrapArray(items, customAccess).sum(), 15);
     });
 
     it('access to structured items with some invalid items', function () {
         let items = [['a', 1], ['b', 2], ['c', 'foo'], ['d', 1], ['e', 5]];
-        chai.assert.isTrue(isNaN(D(items, customAccess).sum()));
+        chai.assert.isTrue(isNaN(wrapArray(items, customAccess).sum()));
     });
 
     it('access to structured items with NaN item', function () {
         let items = [['a', 1], ['b', 2], ['c', NaN], ['d', 1], ['e', 5]];
-        chai.assert.isTrue(isNaN(D(items, customAccess).sum()));
+        chai.assert.isTrue(isNaN(wrapArray(items, customAccess).sum()));
     });
 });
 
@@ -101,16 +116,16 @@ describe('sum() with accessor fn', function () {
 describe('max()', function () {
     it('using valid data', function () {
         let items = [0.4, 1, 2.7, -10, 19, 91.9];
-        chai.assert.equal(D(items).max(), 91.9);
+        chai.assert.equal(wrapArray(items).max(), 91.9);
     });
 
     it('on empty array', function () {
-        chai.assert.isTrue(isNaN(D([]).max()));
+        chai.assert.isTrue(isNaN(wrapArray([]).max()));
     });
 
     it('invalid data (null item)', function () {
         let items = [0.4, 1, 2.7, null, 19, 91.9];
-        chai.assert.isTrue(isNaN(D(items).max()));
+        chai.assert.isTrue(isNaN(wrapArray(items).max()));
     });
 });
 
@@ -118,16 +133,16 @@ describe('max()', function () {
 describe('min()', function () {
     it('valid data', function () {
         let items = [0.4, 1, 2.7, -10, 19, 91];
-        chai.assert.equal(D(items).min(), -10);
+        chai.assert.equal(wrapArray(items).min(), -10);
     });
 
     it('empty array', function () {
-        chai.assert.isTrue(isNaN(D([]).min()));
+        chai.assert.isTrue(isNaN(wrapArray([]).min()));
     });
 
     it('invalid data (null value)', function () {
         let items = [0, 1, 2, null, 19, 91];
-        chai.assert.isTrue(isNaN(D(items).min()));
+        chai.assert.isTrue(isNaN(wrapArray(items).min()));
     });
 });
 
@@ -136,21 +151,21 @@ describe('mean()', function () {
 
     it('general valid numbers', function () {
         let items = [1.1, 2, 3, 4.8, 5, 6, 7, 8, 9.8, 10.1];
-        chai.assert.equal(D(items).mean().toPrecision(3), 5.68);
+        chai.assert.equal(wrapArray(items).mean().toPrecision(3), 5.68);
     });
 
     it('list with NaN item', function () {
         let items = [1.1, 5, NaN, 7];
-        chai.assert.isTrue(isNaN(D(items).mean()));
+        chai.assert.isTrue(isNaN(wrapArray(items).mean()));
     });
 
     it('list with incorrect item', function () {
         let items = [1.1, 5, "it's me", 7];
-        chai.assert.isTrue(isNaN(D(items).mean()));
+        chai.assert.isTrue(isNaN(wrapArray(items).mean()));
     });
 
     it('empty list should have average NaN', function () {
-        chai.assert.isTrue(isNaN(D([]).mean()));
+        chai.assert.isTrue(isNaN(wrapArray([]).mean()));
     });
 });
 
@@ -160,21 +175,21 @@ describe("stdev()", function () {
 
     it('general valid numbers', function () {
         let items = [1, 2, 1, 2, 1, 2];
-        chai.assert.equal(D(items).stdev().toPrecision(4), 0.5477);
+        chai.assert.equal(wrapArray(items).stdev().toPrecision(4), 0.5477);
     });
     
     it('list with NaN item', function () {
         let items = [1.1, 5, NaN, 7];
-        chai.assert.isTrue(isNaN(D(items).stdev()));
+        chai.assert.isTrue(isNaN(wrapArray(items).stdev()));
     });
     
     it('list with incorrect item', function () {
         let items = [1.1, 5, "it's me", 7];
-        chai.assert.isTrue(isNaN(D(items).stdev()));
+        chai.assert.isTrue(isNaN(wrapArray(items).stdev()));
     });
     
     it('empty list should have average NaN', function () {
-        chai.assert.isTrue(isNaN(D([]).stdev()));
+        chai.assert.isTrue(isNaN(wrapArray([]).stdev()));
     });
 });
 
@@ -185,14 +200,14 @@ describe('correl()', function () {
         let values1 = [1, 3, 7, 8, 12, 3, 0, 4, 8, 10];
         let values2 = [1, 3, 7, 8, 12, 3, 0, 4, 8, 10];
 
-        chai.assert.equal(D(values1).correl(D(values2)), 1);
+        chai.assert.equal(wrapArray(values1).correl(wrapArray(values2)), 1);
     });
 
     it('test positive correlation coefficient 1', function () {
         let values1 = [1, 2, 3, 4, 5, 6];
         let values2 = [1, 2, 3, 4, 5, 6];
 
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.equal(ans.toFixed(2), '1.00');
     });
 
@@ -200,7 +215,7 @@ describe('correl()', function () {
         let values1 = [1, 2, 3, 4, 5, 6];
         let values2 = [6, 5, 4, 3, 2, 1];
 
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.equal(ans.toFixed(2), '-1.00');
     });
 
@@ -208,7 +223,7 @@ describe('correl()', function () {
         let values1 = [1, 2, 3, 4, 5, 6];
         let values2 = [4, 7, 3, 4, 1, 2];
 
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.equal(ans.toFixed(6), '-0.695978');
     });
 
@@ -216,7 +231,7 @@ describe('correl()', function () {
         let values1 = [];
         let values2 = [];
 
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.isTrue(isNaN(ans));
     });
 
@@ -224,7 +239,7 @@ describe('correl()', function () {
         let values1 = ['foo', 'bar'];
         let values2 = ['x', 'y'];
 
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.isTrue(isNaN(ans));
     });
 
@@ -232,7 +247,7 @@ describe('correl()', function () {
         let values1 = [0, 1, 2, 3, 4, 5, 6];
         let values2 = [0, 1, 2];
         
-        let ans = D(values1).correl(D(values2));
+        let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.isTrue(isNaN(ans));
     });
 });
@@ -248,20 +263,52 @@ describe('median()', function () {
     ];    
 
     it('array of an even size', function () {       
-        chai.assert.equal(D(values).median(), 61.205);        
+        chai.assert.equal(wrapArray(values).median(), 61.205);        
     });
     
     it('array of an odd size', function () {
-       chai.assert.equal(D(values.slice(0, values.length - 1)).median(), 60.83); 
+       chai.assert.equal(wrapArray(values.slice(0, values.length - 1)).median(), 60.83); 
     });
 
     it('test for an array of size 1', function () {
         let values = [70.7];
 
-        chai.assert.equal(D(values).median(), 70.7);
+        chai.assert.equal(wrapArray(values).median(), 70.7);
     });
 
     it('test for an empty array', function () {
-        chai.assert.isTrue(isNaN(D([]).median()));
+        chai.assert.isTrue(isNaN(wrapArray([]).median()));
+    });
+});
+
+
+describe ('numerize()', function () {
+    
+    it('test float number', function () {
+        chai.assert.equal(numerize(1.71), 1.71);    
+    });
+    
+    it('test integer number', function () {
+        chai.assert.equal(numerize(2), 2);    
+    });
+    
+    it('test float number string', function () {
+        chai.assert.equal(numerize('3.14'), 3.14);    
+    });
+    
+    it('test int number string', function () {
+        chai.assert.equal(numerize('3'), 3);    
+    });
+    
+    it('test null', function () {
+        chai.assert.equal(numerize(null), 0);    
+    });
+    
+    it('test undefined', function () {
+        chai.assert.equal(numerize(undefined), 0);    
+    });
+    
+    it('test object', function () {
+        chai.assert.equal(numerize({'foo': 'bar'}), 0);    
     });
 });

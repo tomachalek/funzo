@@ -1,0 +1,30 @@
+{
+  "name": "funzo",
+  "version": "0.0.1",
+  "description": "A bunch of descriptive statistics functions",
+  "main": "funzo.js",
+  "scripts": {
+    "prepublish": "tsc",
+    "test": "tsc && mocha ./dist/test/test.js"
+  },
+  "devDependencies": {
+    "typescript": "^1.8.10"    
+  },
+  "dependencies": {
+    "chai": "~3.5.0",
+    "mocha": "~2.4.5"
+  },
+  "keywords": [
+    "funzo",
+    "statistics",
+    "data",
+    "mean",
+    "median"
+  ],
+  "repository": {
+    "url": "https://github.com/tomachalek/funzo.git",
+    "type": "git"
+  },
+  "author": "tomachalek",
+  "license": "Apache-2.0"
+}

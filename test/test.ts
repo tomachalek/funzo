@@ -33,6 +33,17 @@ describe('factory function Funzo()', function () {
         
         chai.assert.deepEqual(ans, [-1, -2, -3]);
     });
+    
+    it('test default accessor function x=>x', function () {        
+        let funzo = Funzo();
+        let ans = [];
+        
+        funzo([1, 2, 3]).each((v, i) => {
+            ans.push(v);
+        });
+        
+        chai.assert.deepEqual(ans, [1, 2, 3]);
+    });
 });
 
 
@@ -46,7 +57,6 @@ describe('each()', function () {
         ans.push(v);
         idx.push(i);
         thisValue = this;
-        return true;
     });
     
     it('test value parameter', function () {

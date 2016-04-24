@@ -24,9 +24,9 @@ export class FunzoList<T> {
     
     private accessorFunc:(T)=>number;
     
-    constructor(data:Array<T>, accessorFunc?:(T)=>number) {
+    constructor(accessorFunc:(T)=>number, data:Array<T>) {
+        this.accessorFunc = accessorFunc;
         this.data = data;
-        this.accessorFunc = accessorFunc ? accessorFunc : (t)=>t;
     } 
     
     toString():string {
@@ -51,7 +51,7 @@ export class FunzoList<T> {
      *
      * @param {function} fn a function with signature function (value, index)
      */
-    each(fn:(v:number, i:number)=>boolean) {
+    each(fn:(v:number, i:number)=>any) {
         for (let i = 0; i < this.data.length; i += 1) {
             if (fn.call(this, this.get(i), i) === false) {
                 break;
@@ -245,17 +245,25 @@ export class FunzoList<T> {
     }
 }
 
-export function Funzo<T>(accessorFunc:(T)=>number):(d:Array<T>)=>FunzoList<T> {
+/**
+ * This function produces a partially applied wrapArray() function
+ * with a defined 'accessorFunc' argument. It offers a convenient way
+ * how to perform multiple calculations on lists of the same type.
+ */
+export function Funzo<T>(accessorFunc?:(T)=>number):(d:Array<T>)=>FunzoList<T> {
     return (d:Array<T>) => {
-        return new FunzoList<T>(d, accessorFunc);
+        return new FunzoList<T>(accessorFunc ? accessorFunc : (x)=>x, d);
     };
 }
 
 export function wrapArray<T>(data:Array<T>, accessorFunc?:(T)=>number):FunzoList<T> {
-    return new FunzoList(data, accessorFunc);
+    return new FunzoList(accessorFunc ? accessorFunc : (x)=>x, data);
 }
 
-
+/**
+ * A helper accessor function which always produces numbers
+ * (number => number, string => parsed number, null/none/object => zero)
+ */
 export function numerize(v:any):number {
     if (typeof v === 'number') {
         return v;

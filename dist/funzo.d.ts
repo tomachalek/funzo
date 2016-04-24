@@ -4,7 +4,7 @@
 export declare class FunzoList<T> {
     private data;
     private accessorFunc;
-    constructor(data: Array<T>, accessorFunc?: (T) => number);
+    constructor(accessorFunc: (T) => number, data: Array<T>);
     toString(): string;
     size(): number;
     get(idx: number): number;
@@ -15,7 +15,7 @@ export declare class FunzoList<T> {
      *
      * @param {function} fn a function with signature function (value, index)
      */
-    each(fn: (v: number, i: number) => boolean): void;
+    each(fn: (v: number, i: number) => any): void;
     /**
      * Calculates sum of provided numbers. If a non-number is encountered NaN is returned.
      *
@@ -64,6 +64,15 @@ export declare class FunzoList<T> {
      */
     median(): number;
 }
-export declare function Funzo<T>(accessorFunc: (T) => number): (d: Array<T>) => FunzoList<T>;
+/**
+ * This function produces a partially applied wrapArray() function
+ * with a defined 'accessorFunc' argument. It offers a convenient way
+ * how to perform multiple calculations on lists of the same type.
+ */
+export declare function Funzo<T>(accessorFunc?: (T) => number): (d: Array<T>) => FunzoList<T>;
 export declare function wrapArray<T>(data: Array<T>, accessorFunc?: (T) => number): FunzoList<T>;
+/**
+ * A helper accessor function which always produces numbers
+ * (number => number, string => parsed number, null/none/object => zero)
+ */
 export declare function numerize(v: any): number;

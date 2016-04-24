@@ -18,9 +18,9 @@
  * A bunch of essential descriptive statistics functions
  */
 var FunzoList = (function () {
-    function FunzoList(data, accessorFunc) {
+    function FunzoList(accessorFunc, data) {
+        this.accessorFunc = accessorFunc;
         this.data = data;
-        this.accessorFunc = accessorFunc ? accessorFunc : function (t) { return t; };
     }
     FunzoList.prototype.toString = function () {
         return '[object Data]';
@@ -218,16 +218,25 @@ var FunzoList = (function () {
     return FunzoList;
 }());
 exports.FunzoList = FunzoList;
+/**
+ * This function produces a partially applied wrapArray() function
+ * with a defined 'accessorFunc' argument. It offers a convenient way
+ * how to perform multiple calculations on lists of the same type.
+ */
 function Funzo(accessorFunc) {
     return function (d) {
-        return new FunzoList(d, accessorFunc);
+        return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, d);
     };
 }
 exports.Funzo = Funzo;
 function wrapArray(data, accessorFunc) {
-    return new FunzoList(data, accessorFunc);
+    return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, data);
 }
 exports.wrapArray = wrapArray;
+/**
+ * A helper accessor function which always produces numbers
+ * (number => number, string => parsed number, null/none/object => zero)
+ */
 function numerize(v) {
     if (typeof v === 'number') {
         return v;

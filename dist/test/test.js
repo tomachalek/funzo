@@ -28,6 +28,14 @@ describe('factory function Funzo()', function () {
         }
         chai.assert.deepEqual(ans, [-1, -2, -3]);
     });
+    it('test default accessor function x=>x', function () {
+        var funzo = funzo_1.Funzo();
+        var ans = [];
+        funzo([1, 2, 3]).each(function (v, i) {
+            ans.push(v);
+        });
+        chai.assert.deepEqual(ans, [1, 2, 3]);
+    });
 });
 describe('each()', function () {
     var data = funzo_1.wrapArray(['a', 'b', 'c'], function (v) { return v.charCodeAt(0); });
@@ -38,7 +46,6 @@ describe('each()', function () {
         ans.push(v);
         idx.push(i);
         thisValue = this;
-        return true;
     });
     it('test value parameter', function () {
         chai.assert.deepEqual(ans, [97, 98, 99]);

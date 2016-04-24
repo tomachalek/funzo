@@ -18,20 +18,39 @@
 /// <reference path="../typings/main/definitions/chai/index.d.ts" />
 
 import chai = require('chai');
-import { Funzo, wrapArray, numerize } from  '../funzo';
+import { Funzo, wrapArray, Processable } from  '../funzo';
 
 describe('factory function Funzo()', function () {
-    
+
     it('test instantiation and get()', function () {
-        let funzo = Funzo((v) => -v);
-        let values = funzo([1, 2, 3]);
+        let data = Funzo([1, 2, 3]).map((v) => -v);
         let ans = [];
-        
+
         for (let i = 0; i < 3; i += 1) {
-            ans.push(values.get(i));
-        }        
-        
+            ans.push(data.get(i));
+        }
+
         chai.assert.deepEqual(ans, [-1, -2, -3]);
+    });
+
+    it('test default accessor function x=>x', function () {
+        let ans = [];
+
+        Funzo([1, 2, 3]).map().each((v, i) => {
+            ans.push(v);
+        });
+
+        chai.assert.deepEqual(ans, [1, 2, 3]);
+    });
+
+    it('test numerize', function () {
+        let ans = [];
+
+        Funzo(['1', '1.5', 'foo', {}, null]).numerize().each((v, i) => {
+            ans.push(v);
+        });
+
+        chai.assert.deepEqual(ans, [1, 1.5, 0, 0, 0]);
     });
 });
 
@@ -41,26 +60,25 @@ describe('each()', function () {
     let ans = [];
     let idx = [];
     let thisValue;
-                
+
     data.each(function (v:number, i:number) {
         ans.push(v);
         idx.push(i);
         thisValue = this;
-        return true;
     });
-    
+
     it('test value parameter', function () {
-        chai.assert.deepEqual(ans, [97, 98, 99]);        
+        chai.assert.deepEqual(ans, [97, 98, 99]);
     });
-    
+
     it('test index parameter', function () {
-        chai.assert.deepEqual(idx, [0, 1, 2]);    
+        chai.assert.deepEqual(idx, [0, 1, 2]);
     });
-    
+
     it("test 'this' value", function () {
-        chai.assert.strictEqual(thisValue, data);    
+        chai.assert.strictEqual(thisValue, data);
     });
-    
+
     it('return false breaks iteration', function () {
         let data = wrapArray([0, 1, 2, 3, 4]);
         let ans = [];
@@ -70,9 +88,9 @@ describe('each()', function () {
             if (i >= 2) {
                 return false;
             }
-        }); 
+        });
         chai.assert.deepEqual(ans, [0, 1, 2]);
-    });    
+    });
 });
 
 
@@ -81,7 +99,7 @@ describe('sum()', function () {
         let items = [1, 2, 3, 4.2, 5, 6.1, 7, 8, 9, 10.7];
         chai.assert.equal(wrapArray(items).sum(), 56);
     });
-    
+
     it('empty list', function () {
         let items = [];
         chai.assert.equal(wrapArray(items).sum(), 0);
@@ -90,10 +108,10 @@ describe('sum()', function () {
     it('list with non numbers and NaN', function () {
         let items = ['a', 1, 2, NaN];
         chai.assert.isOk(isNaN(wrapArray(items).sum()));
-    }); 
+    });
 });
 
-describe('sum() with accessor fn', function () {    
+describe('sum() with accessor fn', function () {
     let customAccess = (x) => x[1];
 
     it('access to structured items with valid respective items', function () {
@@ -171,23 +189,23 @@ describe('mean()', function () {
 
 
 describe("stdev()", function () {
-    
+
 
     it('general valid numbers', function () {
         let items = [1, 2, 1, 2, 1, 2];
         chai.assert.equal(wrapArray(items).stdev().toPrecision(4), 0.5477);
     });
-    
+
     it('list with NaN item', function () {
         let items = [1.1, 5, NaN, 7];
         chai.assert.isTrue(isNaN(wrapArray(items).stdev()));
     });
-    
+
     it('list with incorrect item', function () {
         let items = [1.1, 5, "it's me", 7];
         chai.assert.isTrue(isNaN(wrapArray(items).stdev()));
     });
-    
+
     it('empty list should have average NaN', function () {
         chai.assert.isTrue(isNaN(wrapArray([]).stdev()));
     });
@@ -246,10 +264,11 @@ describe('correl()', function () {
     it('with args of different lengths', function () {
         let values1 = [0, 1, 2, 3, 4, 5, 6];
         let values2 = [0, 1, 2];
-        
+
         let ans = wrapArray(values1).correl(wrapArray(values2));
         chai.assert.isTrue(isNaN(ans));
     });
+
 });
 
 
@@ -260,14 +279,14 @@ describe('median()', function () {
         69.33, 83.71, 72.75, 96.07, 59.69, 85.14, 89.58, 66.86, 22.29, 7.72,
         69.11, 48.53, 77.52, 10.23, 10.06, 18.04, 81.4, 3.46, 6.74, 10.9,
         88.57, 93.28, 75.38, 3.57, 40.93, 70.64, 13.98, 23.06, 44.94, 87.38
-    ];    
+    ];
 
-    it('array of an even size', function () {       
-        chai.assert.equal(wrapArray(values).median(), 61.205);        
+    it('array of an even size', function () {
+        chai.assert.equal(wrapArray(values).median(), 61.205);
     });
-    
+
     it('array of an odd size', function () {
-       chai.assert.equal(wrapArray(values.slice(0, values.length - 1)).median(), 60.83); 
+       chai.assert.equal(wrapArray(values.slice(0, values.length - 1)).median(), 60.83);
     });
 
     it('test for an array of size 1', function () {
@@ -278,37 +297,5 @@ describe('median()', function () {
 
     it('test for an empty array', function () {
         chai.assert.isTrue(isNaN(wrapArray([]).median()));
-    });
-});
-
-
-describe ('numerize()', function () {
-    
-    it('test float number', function () {
-        chai.assert.equal(numerize(1.71), 1.71);    
-    });
-    
-    it('test integer number', function () {
-        chai.assert.equal(numerize(2), 2);    
-    });
-    
-    it('test float number string', function () {
-        chai.assert.equal(numerize('3.14'), 3.14);    
-    });
-    
-    it('test int number string', function () {
-        chai.assert.equal(numerize('3'), 3);    
-    });
-    
-    it('test null', function () {
-        chai.assert.equal(numerize(null), 0);    
-    });
-    
-    it('test undefined', function () {
-        chai.assert.equal(numerize(undefined), 0);    
-    });
-    
-    it('test object', function () {
-        chai.assert.equal(numerize({'foo': 'bar'}), 0);    
     });
 });

@@ -1,6 +1,6 @@
 {
   "name": "funzo",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A bunch of descriptive statistics functions",
   "main": "dist/funzo.js",
   "browser": "dist/funzo.js",

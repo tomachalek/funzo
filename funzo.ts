@@ -14,37 +14,49 @@
  * limitations under the License.
  */
 
-/**
- * A bunch of essential descriptive statistics functions
- */
 
-export class FunzoList<T> {
-    
+export interface Processable {
+    get(idx:number):number;
+    each(fn:(v:number, i:number)=>any);
+
+    size():number;
+    sum():number;
+    max():number;
+    min():number;
+    mean():number;
+    stdev():number;
+    correl<U>(otherData:Processable):number;
+    median():number;
+}
+
+
+class FunzoList<T> implements Processable {
+
     private data:Array<T>;
-    
+
     private accessorFunc:(T)=>number;
-    
+
     constructor(accessorFunc:(T)=>number, data:Array<T>) {
         this.accessorFunc = accessorFunc;
         this.data = data;
-    } 
-    
-    toString():string {
-        return '[object Data]';
     }
-    
+
+    toString():string {
+        return '[object FunzoList]';
+    }
+
     size():number {
         return this.data.length;
     }
-    
+
     get(idx:number):number {
         return this.accessorFunc(this.data[idx]);
     }
-    
+
     set(idx:number, v:T):void {
         this.data[idx] = v;
     }
-    
+
     /**
      * Iterates over data and applies passed function.
      * To break the iteration function must return false.
@@ -55,7 +67,7 @@ export class FunzoList<T> {
         for (let i = 0; i < this.data.length; i += 1) {
             if (fn.call(this, this.get(i), i) === false) {
                 break;
-            }            
+            }
         }
     }
 
@@ -106,7 +118,7 @@ export class FunzoList<T> {
      */
     min():number {
         let minVal = this.get(0);
-            
+
         for (let i = 1; i < this.size(); i += 1) {
             let x = this.get(i);
             if (typeof x !== 'number') {
@@ -156,11 +168,15 @@ export class FunzoList<T> {
      * @param otherData
      * @returns {number}
      */
-    correl<U>(otherData:FunzoList<U>):number {
-        let len = Math.min(this.size(), otherData.size());            
+    correl<U>(otherData:Processable):number {
+        let len = Math.min(this.size(), otherData.size());
         let numerator = 0;
         let denominator1 = 0;
         let denominator2 = 0;
+
+        if (otherData instanceof FunzoData) {
+            throw new Error('Please apply map() to the argument');
+        }
 
         if (this.size() === otherData.size()) {
             let m1 = this.mean();
@@ -245,33 +261,52 @@ export class FunzoList<T> {
     }
 }
 
+
+
+export class FunzoData<T> {
+
+    private data:Array<T>;
+
+    constructor(data:Array<T>) {
+        this.data = data;
+    }
+
+    map(fn?:(v:T)=>number):Processable {
+        return new FunzoList<T>(fn ? fn : (x) => x, this.data);
+    }
+
+    /**
+     * A helper accessor function which always produces numbers
+     * (number => number, string => parsed number, null/none/object => zero)
+     */
+    numerize(fallbackValue:number=0):Processable {
+        function convert (v:any):number {
+            if (typeof v === 'number') {
+                return v;
+
+            } else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
+                return parseFloat(v);
+
+            } else {
+                return fallbackValue;
+            }
+        }
+        return new FunzoList<T>(convert, this.data);
+    }
+}
+
+
+
+
 /**
- * This function produces a partially applied wrapArray() function
+ * This function produces a partially applied function
  * with a defined 'accessorFunc' argument. It offers a convenient way
  * how to perform multiple calculations on lists of the same type.
  */
-export function Funzo<T>(accessorFunc?:(T)=>number):(d:Array<T>)=>FunzoList<T> {
-    return (d:Array<T>) => {
-        return new FunzoList<T>(accessorFunc ? accessorFunc : (x)=>x, d);
-    };
+export function Funzo<T>(data:Array<T>):FunzoData<T> {
+    return new FunzoData<T>(data);
 }
 
-export function wrapArray<T>(data:Array<T>, accessorFunc?:(T)=>number):FunzoList<T> {
-    return new FunzoList(accessorFunc ? accessorFunc : (x)=>x, data);
-}
-
-/**
- * A helper accessor function which always produces numbers
- * (number => number, string => parsed number, null/none/object => zero)
- */
-export function numerize(v:any):number {
-    if (typeof v === 'number') {
-        return v;
-
-    } else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
-        return parseFloat(v);
-
-    } else {
-        return 0;
-    }
+export function wrapArray<T>(data:Array<T>, accessorFunc?:(T)=>number):Processable {
+    return new FunzoList<T>(accessorFunc ? accessorFunc : (x)=>x, data);
 }

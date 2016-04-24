@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 "use strict";
-/**
- * A bunch of essential descriptive statistics functions
- */
 var FunzoList = (function () {
     function FunzoList(accessorFunc, data) {
         this.accessorFunc = accessorFunc;
         this.data = data;
     }
     FunzoList.prototype.toString = function () {
-        return '[object Data]';
+        return '[object FunzoList]';
     };
     FunzoList.prototype.size = function () {
         return this.data.length;
@@ -141,6 +138,9 @@ var FunzoList = (function () {
         var numerator = 0;
         var denominator1 = 0;
         var denominator2 = 0;
+        if (otherData instanceof FunzoData) {
+            throw new Error('Please apply map() to the argument');
+        }
         if (this.size() === otherData.size()) {
             var m1 = this.mean();
             var m2 = otherData.mean();
@@ -217,35 +217,45 @@ var FunzoList = (function () {
     };
     return FunzoList;
 }());
-exports.FunzoList = FunzoList;
+var FunzoData = (function () {
+    function FunzoData(data) {
+        this.data = data;
+    }
+    FunzoData.prototype.map = function (fn) {
+        return new FunzoList(fn ? fn : function (x) { return x; }, this.data);
+    };
+    /**
+     * A helper accessor function which always produces numbers
+     * (number => number, string => parsed number, null/none/object => zero)
+     */
+    FunzoData.prototype.numerize = function (fallbackValue) {
+        if (fallbackValue === void 0) { fallbackValue = 0; }
+        function convert(v) {
+            if (typeof v === 'number') {
+                return v;
+            }
+            else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
+                return parseFloat(v);
+            }
+            else {
+                return fallbackValue;
+            }
+        }
+        return new FunzoList(convert, this.data);
+    };
+    return FunzoData;
+}());
+exports.FunzoData = FunzoData;
 /**
- * This function produces a partially applied wrapArray() function
+ * This function produces a partially applied function
  * with a defined 'accessorFunc' argument. It offers a convenient way
  * how to perform multiple calculations on lists of the same type.
  */
-function Funzo(accessorFunc) {
-    return function (d) {
-        return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, d);
-    };
+function Funzo(data) {
+    return new FunzoData(data);
 }
 exports.Funzo = Funzo;
 function wrapArray(data, accessorFunc) {
     return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, data);
 }
 exports.wrapArray = wrapArray;
-/**
- * A helper accessor function which always produces numbers
- * (number => number, string => parsed number, null/none/object => zero)
- */
-function numerize(v) {
-    if (typeof v === 'number') {
-        return v;
-    }
-    else if (typeof v === 'string' && !isNaN(parseFloat(v))) {
-        return parseFloat(v);
-    }
-    else {
-        return 0;
-    }
-}
-exports.numerize = numerize;

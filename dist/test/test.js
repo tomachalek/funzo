@@ -20,21 +20,26 @@ var chai = require('chai');
 var funzo_1 = require('../funzo');
 describe('factory function Funzo()', function () {
     it('test instantiation and get()', function () {
-        var funzo = funzo_1.Funzo(function (v) { return -v; });
-        var values = funzo([1, 2, 3]);
+        var data = funzo_1.Funzo([1, 2, 3]).map(function (v) { return -v; });
         var ans = [];
         for (var i = 0; i < 3; i += 1) {
-            ans.push(values.get(i));
+            ans.push(data.get(i));
         }
         chai.assert.deepEqual(ans, [-1, -2, -3]);
     });
     it('test default accessor function x=>x', function () {
-        var funzo = funzo_1.Funzo();
         var ans = [];
-        funzo([1, 2, 3]).each(function (v, i) {
+        funzo_1.Funzo([1, 2, 3]).map().each(function (v, i) {
             ans.push(v);
         });
         chai.assert.deepEqual(ans, [1, 2, 3]);
+    });
+    it('test numerize', function () {
+        var ans = [];
+        funzo_1.Funzo(['1', '1.5', 'foo', {}, null]).numerize().each(function (v, i) {
+            ans.push(v);
+        });
+        chai.assert.deepEqual(ans, [1, 1.5, 0, 0, 0]);
     });
 });
 describe('each()', function () {
@@ -220,28 +225,5 @@ describe('median()', function () {
     });
     it('test for an empty array', function () {
         chai.assert.isTrue(isNaN(funzo_1.wrapArray([]).median()));
-    });
-});
-describe('numerize()', function () {
-    it('test float number', function () {
-        chai.assert.equal(funzo_1.numerize(1.71), 1.71);
-    });
-    it('test integer number', function () {
-        chai.assert.equal(funzo_1.numerize(2), 2);
-    });
-    it('test float number string', function () {
-        chai.assert.equal(funzo_1.numerize('3.14'), 3.14);
-    });
-    it('test int number string', function () {
-        chai.assert.equal(funzo_1.numerize('3'), 3);
-    });
-    it('test null', function () {
-        chai.assert.equal(funzo_1.numerize(null), 0);
-    });
-    it('test undefined', function () {
-        chai.assert.equal(funzo_1.numerize(undefined), 0);
-    });
-    it('test object', function () {
-        chai.assert.equal(funzo_1.numerize({ 'foo': 'bar' }), 0);
     });
 });

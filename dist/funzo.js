@@ -243,6 +243,21 @@ var FunzoData = (function () {
         }
         return new FunzoList(convert, this.data);
     };
+    FunzoData.prototype.sample = function (size) {
+        function randomInt(fromNum, toNum) {
+            return Math.floor(Math.random() * (toNum - fromNum)) + fromNum;
+        }
+        if (size <= 0 || size > this.data.length) {
+            throw new Error('Sample size must be between zero and the size of the dataset');
+        }
+        for (var i = 0; i < size; i += 1) {
+            var randIdx = randomInt(i, this.data.length);
+            var tmp = this.data[i];
+            this.data[i] = this.data[randIdx];
+            this.data[randIdx] = tmp;
+        }
+        return new FunzoData(this.data.slice(0, size));
+    };
     return FunzoData;
 }());
 exports.FunzoData = FunzoData;

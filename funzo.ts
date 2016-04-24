@@ -293,6 +293,22 @@ export class FunzoData<T> {
         }
         return new FunzoList<T>(convert, this.data);
     }
+
+    sample(size:number):FunzoData<T> {
+        function randomInt(fromNum, toNum) {
+            return Math.floor(Math.random() * (toNum - fromNum)) + fromNum;
+        }
+        if (size <= 0 || size > this.data.length) {
+            throw new Error('Sample size must be between zero and the size of the dataset');
+        }
+        for (let i = 0; i < size; i += 1) {
+            let randIdx = randomInt(i, this.data.length);
+            let tmp = this.data[i];
+            this.data[i] = this.data[randIdx];
+            this.data[randIdx] = tmp;
+        }
+        return new FunzoData<T>(this.data.slice(0, size));
+    }
 }
 
 

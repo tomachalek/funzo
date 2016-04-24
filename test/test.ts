@@ -52,6 +52,33 @@ describe('factory function Funzo()', function () {
 
         chai.assert.deepEqual(ans, [1, 1.5, 0, 0, 0]);
     });
+
+    it('random sample', function () {
+        let values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        let randomValues = [0.99, 0.9, 0.8, 0.7, 0.6];
+        let i = 0;
+        let tmp = Math.random;
+        Math.random = () => {
+            let ans = randomValues[i];
+            i += 1;
+            return ans;
+        }
+        let values2:any = Funzo(values).sample(5);
+        chai.assert.deepEqual(values2.data, [15, 14, 13, 12, 11]);
+        Math.random = tmp;
+    });
+
+    it('too big random sample', function () {
+        chai.assert.throws(() => {
+            Funzo([1, 2]).sample(10);
+        }, Error);
+    });
+
+    it('too small random sample', function () {
+        chai.assert.throws(() => {
+            Funzo([1, 2]).sample(0);
+        }, Error);
+    });
 });
 
 

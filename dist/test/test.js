@@ -41,6 +41,30 @@ describe('factory function Funzo()', function () {
         });
         chai.assert.deepEqual(ans, [1, 1.5, 0, 0, 0]);
     });
+    it('random sample', function () {
+        var values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        var randomValues = [0.99, 0.9, 0.8, 0.7, 0.6];
+        var i = 0;
+        var tmp = Math.random;
+        Math.random = function () {
+            var ans = randomValues[i];
+            i += 1;
+            return ans;
+        };
+        var values2 = funzo_1.Funzo(values).sample(5);
+        chai.assert.deepEqual(values2.data, [15, 14, 13, 12, 11]);
+        Math.random = tmp;
+    });
+    it('too big random sample', function () {
+        chai.assert.throws(function () {
+            funzo_1.Funzo([1, 2]).sample(10);
+        }, Error);
+    });
+    it('too small random sample', function () {
+        chai.assert.throws(function () {
+            funzo_1.Funzo([1, 2]).sample(0);
+        }, Error);
+    });
 });
 describe('each()', function () {
     var data = funzo_1.wrapArray(['a', 'b', 'c'], function (v) { return v.charCodeAt(0); });

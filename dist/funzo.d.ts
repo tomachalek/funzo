@@ -19,6 +19,7 @@ export declare class FunzoData<T> {
      * (number => number, string => parsed number, null/none/object => zero)
      */
     numerize(fallbackValue?: number): Processable;
+    sample(size: number): FunzoData<T>;
 }
 /**
  * This function produces a partially applied function

@@ -65,6 +65,11 @@ describe('factory function Funzo()', function () {
             funzo_1.Funzo([1, 2]).sample(0);
         }, Error);
     });
+    it('test round()', function () {
+        var values = [1.45, 1.9, 1.44, 9.71, 0.01, 0.05];
+        var expected = [1.4, 1.9, 1.4, 9.7, 0.00, 0.1];
+        chai.assert.deepEqual(funzo_1.Funzo(values).round(1).toArray(), expected);
+    });
 });
 describe('each()', function () {
     var data = funzo_1.wrapArray(['a', 'b', 'c'], function (v) { return v.charCodeAt(0); });

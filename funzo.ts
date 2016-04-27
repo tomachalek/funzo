@@ -18,6 +18,7 @@
 export interface Processable {
     get(idx:number):number;
     each(fn:(v:number, i:number)=>any);
+    toArray():Array<number>;
 
     size():number;
     sum():number;
@@ -55,6 +56,10 @@ class FunzoList<T> implements Processable {
 
     set(idx:number, v:T):void {
         this.data[idx] = v;
+    }
+
+    toArray():Array<number> {
+        return this.data.map(this.accessorFunc);
     }
 
     /**
@@ -309,9 +314,15 @@ export class FunzoData<T> {
         }
         return new FunzoData<T>(this.data.slice(0, size));
     }
+
+    round(places:number):Processable {
+        function convert (v:number):number {
+            return parseFloat(v.toFixed(places));
+        }
+        // int terms of types this is actually wrong (number vs. T)
+        return new FunzoList<T>(convert, this.data);
+    }
 }
-
-
 
 
 /**

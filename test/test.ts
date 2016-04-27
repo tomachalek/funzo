@@ -79,6 +79,12 @@ describe('factory function Funzo()', function () {
             Funzo([1, 2]).sample(0);
         }, Error);
     });
+
+    it('test round()', function () {
+        let values =   [1.45, 1.9, 1.44, 9.71, 0.01, 0.05];
+        let expected = [1.4,  1.9, 1.4, 9.7, 0.00, 0.1];
+        chai.assert.deepEqual(Funzo(values).round(1).toArray(), expected);
+    });
 });
 
 

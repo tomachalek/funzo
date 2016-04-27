@@ -31,6 +31,9 @@ var FunzoList = (function () {
     FunzoList.prototype.set = function (idx, v) {
         this.data[idx] = v;
     };
+    FunzoList.prototype.toArray = function () {
+        return this.data.map(this.accessorFunc);
+    };
     /**
      * Iterates over data and applies passed function.
      * To break the iteration function must return false.
@@ -257,6 +260,13 @@ var FunzoData = (function () {
             this.data[randIdx] = tmp;
         }
         return new FunzoData(this.data.slice(0, size));
+    };
+    FunzoData.prototype.round = function (places) {
+        function convert(v) {
+            return parseFloat(v.toFixed(places));
+        }
+        // int terms of types this is actually wrong (number vs. T)
+        return new FunzoList(convert, this.data);
     };
     return FunzoData;
 }());

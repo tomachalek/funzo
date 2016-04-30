@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 "use strict";
+/**
+ * A core implementation of Processable
+ */
 var FunzoList = (function () {
     function FunzoList(accessorFunc, data) {
         this.accessorFunc = accessorFunc;
@@ -162,6 +165,9 @@ var FunzoList = (function () {
      * Calculates a median of the dataset. This function
      * alters the order of the data (but does not sort them)
      * to prevent exhausting RAM.
+     *
+     * The function uses [Quickselect](https://en.wikipedia.org/wiki/Quickselect)
+     * algorithm.
      */
     FunzoList.prototype.median = function () {
         var self = this;
@@ -218,12 +224,38 @@ var FunzoList = (function () {
             return m;
         }
     };
+    /**
+     * Calculate Shannon entropy assuming the data represent
+     * list of probabilities (i.e. values 0 <= p <= 1). In
+     * case an incorrect value is encountered, NaN is returned.
+     *
+     * @param base - base of the logarithm
+     */
+    FunzoList.prototype.entropy = function (base) {
+        var ans = 0;
+        var tmp;
+        for (var i = 0; i < this.size(); i += 1) {
+            tmp = this.get(i);
+            if (tmp < 0 || tmp > 1) {
+                return NaN;
+            }
+            ans += tmp * Math.log(tmp);
+        }
+        return -ans / Math.log(base);
+    };
     return FunzoList;
 }());
+/**
+ * A wrapper object providing access to data manipulation.
+ */
 var FunzoData = (function () {
     function FunzoData(data) {
         this.data = data;
     }
+    /**
+     * This is an essential function providing access to Processable
+     * data set (i.e. the set where all the stat. functions are available).
+     */
     FunzoData.prototype.map = function (fn) {
         return new FunzoList(fn ? fn : function (x) { return x; }, this.data);
     };
@@ -246,6 +278,13 @@ var FunzoData = (function () {
         }
         return new FunzoList(convert, this.data);
     };
+    FunzoData.prototype.round = function (places) {
+        function convert(v) {
+            return parseFloat(v.toFixed(places));
+        }
+        // int terms of types this is actually wrong (number vs. T)
+        return new FunzoList(convert, this.data);
+    };
     FunzoData.prototype.sample = function (size) {
         function randomInt(fromNum, toNum) {
             return Math.floor(Math.random() * (toNum - fromNum)) + fromNum;
@@ -261,12 +300,32 @@ var FunzoData = (function () {
         }
         return new FunzoData(this.data.slice(0, size));
     };
-    FunzoData.prototype.round = function (places) {
-        function convert(v) {
-            return parseFloat(v.toFixed(places));
+    /**
+     * Return a list of probabilites calculated based on
+     * occurrences of individual items in original data.
+     * Please note that returned lists are intended for
+     * aggregation purposes - there is no mapping available
+     * between the original data and these probability values
+     * (i.e. you know that some value has a probability 'p' but
+     * you do not know which value it is).
+     *
+     * @param key a function mapping from an original value to item identifier
+     */
+    FunzoData.prototype.probs = function (key) {
+        var probs = Object.create(null);
+        var ans = [];
+        var item;
+        if (key === undefined) {
+            key = function (x) { return x; };
         }
-        // int terms of types this is actually wrong (number vs. T)
-        return new FunzoList(convert, this.data);
+        for (var i = 0; i < this.data.length; i += 1) {
+            item = key(this.data[i]);
+            probs[item] = probs[item] !== undefined ? probs[item] + 1 : 1;
+        }
+        for (var p in probs) {
+            ans.push(probs[p] / this.data.length);
+        }
+        return new FunzoList(function (x) { return x; }, ans);
     };
     return FunzoData;
 }());

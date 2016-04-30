@@ -1,7 +1,7 @@
 {
   "name": "funzo",
-  "version": "0.0.6",
-  "description": "A bunch of descriptive statistics functions",
+  "version": "0.0.7",
+  "description": "A bunch of descriptive statistics (and related) functions",
   "main": "dist/funzo.js",
   "browser": "dist/funzo.js",
   "scripts": {
@@ -20,7 +20,8 @@
     "statistics",
     "data",
     "mean",
-    "median"
+    "median",
+    "entropy"
   ],
   "repository": {
     "url": "git+https://github.com/tomachalek/funzo.git",

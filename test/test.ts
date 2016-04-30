@@ -85,6 +85,17 @@ describe('factory function Funzo()', function () {
         let expected = [1.4,  1.9, 1.4, 9.7, 0.00, 0.1];
         chai.assert.deepEqual(Funzo(values).round(1).toArray(), expected);
     });
+
+    it('test freqs()', function () {
+        let values = [{v: 'a'}, {v: 'b'}, {v: 'c'}, {v: 'c'}];
+        let freqs = Funzo(values).probs((x)=>x.v).toArray().sort();
+        chai.assert.deepEqual(freqs, [0.25, 0.25, 0.5]);
+    });
+
+    it('test freqs() of empty', function () {
+        let freqs = Funzo([]).probs().toArray();
+        chai.assert.deepEqual(freqs, []);
+    });
 });
 
 
@@ -330,5 +341,36 @@ describe('median()', function () {
 
     it('test for an empty array', function () {
         chai.assert.isTrue(isNaN(wrapArray([]).median()));
+    });
+});
+
+
+describe('entropy()', function () {
+
+    it('common input data', function () {
+        let values = [1, 1, 1, 2, 3, 3, 4, 1, 6, 7, 2, 1, 2, 0];
+        let entropy = Funzo(values).probs().entropy(2);
+        chai.assert.approximately(entropy, 2.4956, 0.00001);
+    });
+
+    it('all values same', function () {
+        let values = [{v: 'a'}, {v: 'a'}, {v: 'a'}, {v: 'a'}];
+        let entropy = Funzo(values).probs((x)=>x.v).entropy(2);
+        chai.assert.equal(entropy, 0);
+    });
+
+    it('test probs directly', function () {
+        let entropy = Funzo([0.5, 0.25, 0.25]).map().entropy(2);
+        chai.assert.equal(entropy, 1.5);
+    });
+
+    it('test invalid probs values (negative value)', function () {
+        let entropy = Funzo([-0.001, 0.25, 0.25]).map().entropy(2);
+        chai.assert.isNaN(entropy);
+    });
+
+    it('test invalid probs values (value > 1)', function () {
+        let entropy = Funzo([0.5, 1.0001, 0.25]).map().entropy(2);
+        chai.assert.isNaN(entropy);
     });
 });

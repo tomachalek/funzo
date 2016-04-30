@@ -15,6 +15,10 @@
  */
 
 
+/**
+ * An abstract interface specifying
+ * all the available statistical functions.
+ */
 export interface Processable {
     get(idx:number):number;
     each(fn:(v:number, i:number)=>any);
@@ -26,11 +30,15 @@ export interface Processable {
     min():number;
     mean():number;
     stdev():number;
-    correl<U>(otherData:Processable):number;
     median():number;
+    entropy(log:number):number;
+
+    correl<U>(otherData:Processable):number;
 }
 
-
+/**
+ * A core implementation of Processable
+ */
 class FunzoList<T> implements Processable {
 
     private data:Array<T>;
@@ -202,6 +210,9 @@ class FunzoList<T> implements Processable {
      * Calculates a median of the dataset. This function
      * alters the order of the data (but does not sort them)
      * to prevent exhausting RAM.
+     *
+     * The function uses [Quickselect](https://en.wikipedia.org/wiki/Quickselect)
+     * algorithm.
      */
     median():number {
         let self = this;
@@ -264,10 +275,32 @@ class FunzoList<T> implements Processable {
             return m;
         }
     }
+
+    /**
+     * Calculate Shannon entropy assuming the data represent
+     * list of probabilities (i.e. values 0 <= p <= 1). In
+     * case an incorrect value is encountered, NaN is returned.
+     *
+     * @param base - base of the logarithm
+     */
+    entropy(base:number):number {
+        let ans = 0;
+        let tmp;
+        for (let i = 0; i < this.size(); i += 1) {
+            tmp = this.get(i);
+            if (tmp < 0 || tmp > 1) {
+                return NaN;
+            }
+            ans += tmp * Math.log(tmp);
+        }
+        return -ans / Math.log(base);
+    }
 }
 
 
-
+/**
+ * A wrapper object providing access to data manipulation.
+ */
 export class FunzoData<T> {
 
     private data:Array<T>;
@@ -276,6 +309,10 @@ export class FunzoData<T> {
         this.data = data;
     }
 
+    /**
+     * This is an essential function providing access to Processable
+     * data set (i.e. the set where all the stat. functions are available).
+     */
     map(fn?:(v:T)=>number):Processable {
         return new FunzoList<T>(fn ? fn : (x) => x, this.data);
     }
@@ -299,6 +336,14 @@ export class FunzoData<T> {
         return new FunzoList<T>(convert, this.data);
     }
 
+    round(places:number):Processable {
+        function convert (v:number):number {
+            return parseFloat(v.toFixed(places));
+        }
+        // int terms of types this is actually wrong (number vs. T)
+        return new FunzoList<T>(convert, this.data);
+    }
+
     sample(size:number):FunzoData<T> {
         function randomInt(fromNum, toNum) {
             return Math.floor(Math.random() * (toNum - fromNum)) + fromNum;
@@ -315,12 +360,32 @@ export class FunzoData<T> {
         return new FunzoData<T>(this.data.slice(0, size));
     }
 
-    round(places:number):Processable {
-        function convert (v:number):number {
-            return parseFloat(v.toFixed(places));
+    /**
+     * Return a list of probabilites calculated based on
+     * occurrences of individual items in original data.
+     * Please note that returned lists are intended for
+     * aggregation purposes - there is no mapping available
+     * between the original data and these probability values
+     * (i.e. you know that some value has a probability 'p' but
+     * you do not know which value it is).
+     *
+     * @param key a function mapping from an original value to item identifier
+     */
+    probs(key?:(v:any)=>string):Processable {
+        let probs = Object.create(null);
+        let ans = [];
+        let item;
+        if (key === undefined) {
+            key = (x) => x;
         }
-        // int terms of types this is actually wrong (number vs. T)
-        return new FunzoList<T>(convert, this.data);
+        for (let i = 0; i < this.data.length; i += 1) {
+            item = key(this.data[i]);
+            probs[item] = probs[item] !== undefined ? probs[item] + 1 : 1;
+        }
+        for (let p in probs) {
+            ans.push(probs[p] / this.data.length);
+        }
+        return new FunzoList<T>((x)=>x, ans);
     }
 }
 

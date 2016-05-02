@@ -350,7 +350,7 @@ describe('entropy()', function () {
     it('common input data', function () {
         let values = [1, 1, 1, 2, 3, 3, 4, 1, 6, 7, 2, 1, 2, 0];
         let entropy = Funzo(values).probs().entropy(2);
-        chai.assert.approximately(entropy, 2.4956, 0.00001);
+        chai.assert.approximately(entropy, 2.4956, 0.00005);
     });
 
     it('all values same', function () {
@@ -373,4 +373,43 @@ describe('entropy()', function () {
         let entropy = Funzo([0.5, 1.0001, 0.25]).map().entropy(2);
         chai.assert.isNaN(entropy);
     });
+});
+
+
+describe('mi() - mutual information', function () {
+    let v1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    let v2 = [1, 2, 3, 4, 1, 4, 8, 2, 9, 10, 11, 0];
+    let v3 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
+    it('common input data', function () {
+        let ans = Funzo(v1).map().joint(Funzo(v2).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.13833, 0.00005);
+    });
+
+    it('independent variables', function () {
+        let ans = Funzo(v1).map().joint(Funzo(v3).map()).mi(2.71828);
+        chai.assert.approximately(ans, 0, 0.00005);
+    });
+
+    it('dependent variables', function () {
+        let ans = Funzo(v1).map().joint(Funzo(v1).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.4849, 0.00005);
+    });
+
+    it('dependent variables', function () {
+        let ans = Funzo(v1).map().joint(Funzo(v1).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.4849, 0.00005);
+    });
+
+    it('different sizes', function () {
+        let v4 = [1, 2];
+        let ans = Funzo(v1).map().joint(Funzo(v4).map()).mi(2);
+        chai.assert.approximately(ans, 1, 0.00005);
+    });
+
+    it('empty data', function () {
+        let ans = Funzo([]).map().joint(Funzo([]).map()).mi(2);
+        chai.assert.equal(ans, 0);
+    });
+
 });

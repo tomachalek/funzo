@@ -11,6 +11,10 @@
 * **sample**(size:number):FunzoData
 * **probs**(key?:(v:any)=&gt;string):Processable
 
+### FunzoJointData
+
+* **mi**(base:number):number - Mutual information
+
 ### Processable type (a processable variant of FunzoData)
 
 * **get**(idx:number):number
@@ -24,6 +28,8 @@
 * **stdev**():number
 * **correl**&lt;U&gt;(otherData:Processable):number
 * **median**():number
+* **entropy**(base:number):number
+* **joint**(otherData:Processable):FunzoJointData
 
 
 ## How to use Funzo
@@ -101,7 +107,7 @@ Funzo([3.1416, 2.79, 1.59]).round(1).mean();
 let stdev3 = Funzo(superArray).sample(1000).map().stdev();
 ```
 
-### Calculation correlation between two datasets
+### Calculating correlation between two datasets
 
 ```js
 // when calculating correlation, different instances can be combined:
@@ -114,6 +120,15 @@ Funzo(values1).map().correl(Funzo(values2).map((item)=>item.m));
 let data = [{name: 'john'}, {name: 'paula'}, {name: 'john'}, {name: 'dana'}];
 
 Funzo(data).probs((x)=>x.name).entropy(2);
+```
+
+### Calculating mutual information of two datasets
+
+```js
+let vals1 = [1, 2, 3, 4, 5, 6];
+let vals2 = [1, 2, 2, 4, 6, 6];
+
+Funzo(val1).map().joint(Funzo(vals2).map()).mi(2);
 ```
 
 ## Simplified interface

@@ -269,7 +269,7 @@ describe('entropy()', function () {
     it('common input data', function () {
         var values = [1, 1, 1, 2, 3, 3, 4, 1, 6, 7, 2, 1, 2, 0];
         var entropy = funzo_1.Funzo(values).probs().entropy(2);
-        chai.assert.approximately(entropy, 2.4956, 0.00001);
+        chai.assert.approximately(entropy, 2.4956, 0.00005);
     });
     it('all values same', function () {
         var values = [{ v: 'a' }, { v: 'a' }, { v: 'a' }, { v: 'a' }];
@@ -287,5 +287,35 @@ describe('entropy()', function () {
     it('test invalid probs values (value > 1)', function () {
         var entropy = funzo_1.Funzo([0.5, 1.0001, 0.25]).map().entropy(2);
         chai.assert.isNaN(entropy);
+    });
+});
+describe('mi() - mutual information', function () {
+    var v1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    var v2 = [1, 2, 3, 4, 1, 4, 8, 2, 9, 10, 11, 0];
+    var v3 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    it('common input data', function () {
+        var ans = funzo_1.Funzo(v1).map().joint(funzo_1.Funzo(v2).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.13833, 0.00005);
+    });
+    it('independent variables', function () {
+        var ans = funzo_1.Funzo(v1).map().joint(funzo_1.Funzo(v3).map()).mi(2.71828);
+        chai.assert.approximately(ans, 0, 0.00005);
+    });
+    it('dependent variables', function () {
+        var ans = funzo_1.Funzo(v1).map().joint(funzo_1.Funzo(v1).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.4849, 0.00005);
+    });
+    it('dependent variables', function () {
+        var ans = funzo_1.Funzo(v1).map().joint(funzo_1.Funzo(v1).map()).mi(2.71828);
+        chai.assert.approximately(ans, 2.4849, 0.00005);
+    });
+    it('different sizes', function () {
+        var v4 = [1, 2];
+        var ans = funzo_1.Funzo(v1).map().joint(funzo_1.Funzo(v4).map()).mi(2);
+        chai.assert.approximately(ans, 1, 0.00005);
+    });
+    it('empty data', function () {
+        var ans = funzo_1.Funzo([]).map().joint(funzo_1.Funzo([]).map()).mi(2);
+        chai.assert.equal(ans, 0);
     });
 });

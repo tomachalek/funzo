@@ -14,6 +14,7 @@ export interface Processable {
     stdev(): number;
     median(): number;
     entropy(log: number): number;
+    joint(otherData: Processable): FunzoJointData;
     correl<U>(otherData: Processable): number;
 }
 /**
@@ -46,6 +47,18 @@ export declare class FunzoData<T> {
      * @param key a function mapping from an original value to item identifier
      */
     probs(key?: (v: any) => string): Processable;
+}
+/**
+ * Represents a joint probability distribution based on two samples
+ */
+export declare class FunzoJointData {
+    private list1;
+    private list2;
+    constructor(list1: Processable, list2: Processable);
+    /**
+     * Mutual information
+     */
+    mi(base: number): number;
 }
 /**
  * This function produces a partially applied function

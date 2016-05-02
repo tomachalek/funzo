@@ -243,6 +243,9 @@ var FunzoList = (function () {
         }
         return -ans / Math.log(base);
     };
+    FunzoList.prototype.joint = function (otherData) {
+        return new FunzoJointData(this, otherData);
+    };
     return FunzoList;
 }());
 /**
@@ -330,6 +333,43 @@ var FunzoData = (function () {
     return FunzoData;
 }());
 exports.FunzoData = FunzoData;
+/**
+ * Represents a joint probability distribution based on two samples
+ */
+var FunzoJointData = (function () {
+    function FunzoJointData(list1, list2) {
+        this.list1 = list1;
+        this.list2 = list2;
+    }
+    /**
+     * Mutual information
+     */
+    FunzoJointData.prototype.mi = function (base) {
+        var probs12 = Object.create(null);
+        var probs1 = Object.create(null);
+        var probs2 = Object.create(null);
+        var limit = Math.min(this.list1.size(), this.list2.size());
+        for (var i = 0; i < limit; i += 1) {
+            var v1 = String(this.list1.get(i));
+            var v2 = String(this.list2.get(i));
+            var v1v2 = v1 + ':' + v2;
+            probs12[v1v2] = probs12[v1v2] !== undefined ? probs12[v1v2] + 1 : 1;
+            probs1[v1] = probs1[v1] !== undefined ? probs1[v1] + 1 : 1;
+            probs2[v2] = probs2[v2] !== undefined ? probs2[v2] + 1 : 1;
+        }
+        var ans = 0;
+        var pairs = Object.keys(probs12);
+        for (var i = 0; i < pairs.length; i += 1) {
+            var vals = pairs[i].split(':');
+            ans += probs12[pairs[i]] / pairs.length
+                * Math.log((probs12[pairs[i]] / pairs.length) /
+                    ((probs1[vals[0]] / limit) * (probs2[vals[1]] / limit)));
+        }
+        return ans / Math.log(base);
+    };
+    return FunzoJointData;
+}());
+exports.FunzoJointData = FunzoJointData;
 /**
  * This function produces a partially applied function
  * with a defined 'accessorFunc' argument. It offers a convenient way

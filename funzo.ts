@@ -33,6 +33,7 @@ export interface Processable {
     median():number;
     entropy(log:number):number;
 
+    joint(otherData:Processable):FunzoJointData;
     correl<U>(otherData:Processable):number;
 }
 
@@ -295,6 +296,10 @@ class FunzoList<T> implements Processable {
         }
         return -ans / Math.log(base);
     }
+
+    joint(otherData:Processable):FunzoJointData {
+        return new FunzoJointData(this, otherData);
+    }
 }
 
 
@@ -386,6 +391,50 @@ export class FunzoData<T> {
             ans.push(probs[p] / this.data.length);
         }
         return new FunzoList<T>((x)=>x, ans);
+    }
+}
+
+
+/**
+ * Represents a joint probability distribution based on two samples
+ */
+export class FunzoJointData {
+
+    private list1:Processable;
+    private list2:Processable;
+
+    constructor(list1:Processable, list2:Processable) {
+        this.list1 = list1;
+        this.list2 = list2;
+    }
+
+    /**
+     * Mutual information
+     */
+    mi(base:number) {
+        let probs12 = Object.create(null);
+        let probs1 = Object.create(null);
+        let probs2 = Object.create(null);
+        let limit = Math.min(this.list1.size(), this.list2.size());
+
+        for (let i = 0; i < limit; i += 1) {
+            let v1 = String(this.list1.get(i));
+            let v2 = String(this.list2.get(i));
+            let v1v2 = v1 + ':' + v2;
+            probs12[v1v2] = probs12[v1v2] !== undefined ? probs12[v1v2] + 1 : 1;
+            probs1[v1] = probs1[v1] !== undefined ? probs1[v1] + 1 : 1;
+            probs2[v2] = probs2[v2] !== undefined ? probs2[v2] + 1 : 1;
+        }
+        let ans = 0;
+        let pairs = Object.keys(probs12);
+        for (let i = 0; i < pairs.length; i += 1) {
+            let vals = pairs[i].split(':');
+            ans += probs12[pairs[i]] / pairs.length
+                    * Math.log( (probs12[pairs[i]] / pairs.length) /
+                            ( (probs1[vals[0]] / limit) * (probs2[vals[1]] / limit) )
+                      );
+        }
+        return ans / Math.log(base);
     }
 }
 

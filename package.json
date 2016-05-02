@@ -1,8 +1,8 @@
 {
   "name": "funzo",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A bunch of descriptive statistics (and related) functions",
-  "main": "dist/funzo.js",
+  "main": "dist/funzo.min.js",
   "browser": "dist/funzo.js",
   "scripts": {
     "prepublish": "tsc",
@@ -21,7 +21,9 @@
     "data",
     "mean",
     "median",
-    "entropy"
+    "entropy",
+    "standard deviation",
+    "mutual information"
   ],
   "repository": {
     "url": "git+https://github.com/tomachalek/funzo.git",

@@ -18,9 +18,10 @@
 /// <reference path="../typings/main/definitions/chai/index.d.ts" />
 
 import chai = require('chai');
-import { Funzo, wrapArray, Processable } from  '../funzo';
+import { Funzo, wrapArray, Processable, DataModifier } from  '../funzo';
 
-describe('factory function Funzo()', function () {
+
+describe('FunzoData - general', function () {
 
     it('test instantiation and get()', function () {
         let data = Funzo([1, 2, 3]).map((v) => -v);
@@ -96,6 +97,65 @@ describe('factory function Funzo()', function () {
         let freqs = Funzo([]).probs().toArray();
         chai.assert.deepEqual(freqs, []);
     });
+});
+
+
+describe('FunzoData.filter()', function () {
+
+    it('test simple', function () {
+        let items = [1, -3, 2, -4, 3, -5, 4, -6, 5, -7];
+
+        let fd = Funzo(items).filter((v)=>(v >= 0));
+        chai.assert.deepEqual(fd.map().toArray(), [1, 2, 3, 4, 5]);
+    });
+
+    it('test size', function () {
+        let items = [1, -3, 2, -4, 3, -5, 4, -6, 5, -7];
+
+        let fd = Funzo(items).filter((v)=>(v >= 0));
+        chai.assert.equal(fd.map().size(), 5);
+    });
+
+    it('test fetch values', function () {
+        let items = [78, 5, 0, 43, 3, 97, 23, 5, 68, 5, 8, 4, 44, 7, 34, 2, 89, 6, 82, 83];
+        let filteredItems = items.filter(v => v % 2 == 0);
+        let fd = Funzo(items).filter(v => v % 2 === 0).map();
+        for (let i = 0; i < filteredItems.length; i += 1) {
+            chai.assert.equal(fd.get(i), filteredItems[i]);
+        }
+    });
+
+    it('test chained filters', function () {
+        let items = [10, 12, 32, 46, 55, 71, 74, 87, 93, 106, 126, 129, 136, 138, 148, 172, 177, 186, 191, 192];
+        let fd = Funzo(items).filter(x => x % 2 === 0).filter(x => x > 100);
+        chai.assert.deepEqual(fd.map().toArray(), [106, 126, 136, 138, 148, 172, 186, 192]);
+    });
+});
+
+
+describe('DataModifier', function () {
+
+    it('test simple', function () {
+        let items = [1, -3, 2, -4, 3, -5, 4, -6, 5, -7];
+        let filter = x => x >= 0;
+
+        let dm = new DataModifier(x=>x, filter, items);
+        dm.swap(0, 4);
+        let fd = Funzo(items).filter(filter);
+        chai.assert.deepEqual(fd.map().toArray(), [5, 2, 3, 4, 1]);
+    });
+
+
+    it ('test empty', function () {
+        let items = [];
+        let filter = x => x >= 0;
+
+        let dm = new DataModifier(x=>x, filter, items);
+        dm.swap(0, 4);
+        let fd = Funzo(items).filter(filter);
+        chai.assert.deepEqual(fd.map().toArray(), []);
+    });
+
 });
 
 
@@ -305,12 +365,12 @@ describe('correl()', function () {
         chai.assert.isTrue(isNaN(ans));
     });
 
-    it('with args of different lengths', function () {
+    it('args of different lengths (longer dataset is truncated)', function () {
         let values1 = [0, 1, 2, 3, 4, 5, 6];
         let values2 = [0, 1, 2];
 
         let ans = wrapArray(values1).correl(wrapArray(values2));
-        chai.assert.isTrue(isNaN(ans));
+        chai.assert.equal(ans, 1);
     });
 
 });
@@ -341,6 +401,18 @@ describe('median()', function () {
 
     it('test for an empty array', function () {
         chai.assert.isTrue(isNaN(wrapArray([]).median()));
+    });
+
+    let values2 = [-3, -2, -1, 0, 1, 2, 3];
+
+    it('filtered array (test swap works well)', function () {
+        let m = Funzo(values2).filter(x => x >= 0).map().median();
+        chai.assert.equal(m, 1.5);
+    });
+
+    it('array with forced pass-all filter', function () {
+        let m = Funzo(values).filter(x => true).map().median();
+        chai.assert.equal(m, 61.205);
     });
 });
 

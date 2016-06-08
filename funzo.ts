@@ -15,6 +15,12 @@
  */
 
 
+export interface Iterator<T> {
+    hasNext():boolean;
+    next():T;
+}
+
+
 /**
  * An abstract interface specifying
  * all the available statistical functions.
@@ -23,6 +29,7 @@ export interface Processable {
     get(idx:number):number;
     each(fn:(v:number, i:number)=>any);
     toArray():Array<number>;
+    createIterator():Iterator<number>;
 
     size():number;
     sum():number;
@@ -37,6 +44,129 @@ export interface Processable {
     correl<U>(otherData:Processable):number;
 }
 
+
+class FunzoIterator<T> implements Iterator<T> {
+
+    private data:Array<T>;
+
+    private filterFn:(T)=>boolean;
+
+    private i:number;
+
+    private internalIdx:number;
+
+    constructor(data:Array<T>, filterFn:(T)=>boolean) {
+        this.data = data;
+        this.filterFn = filterFn;
+        this.i = 0;
+        this.internalIdx = -1;
+    }
+
+    private findNextMatch(updateInternalPointer:boolean=false) {
+        let i = this.internalIdx + 1;
+        let tmp = this.data[i];
+        let ans = undefined;
+
+        while (i < this.data.length) {
+            tmp = this.data[i];
+            if (!this.filterFn || this.filterFn(tmp)) {
+                ans = tmp;
+                break;
+            }
+            i += 1;
+        }
+        if (updateInternalPointer) {
+            this.internalIdx = i;
+        }
+        return ans;
+    }
+
+    next():T {
+        let ans = this.findNextMatch(true);
+        if (ans !== undefined) {
+            this.i += 1;
+        }
+        return ans;
+    }
+
+    hasNext():boolean {
+        return this.findNextMatch() !== undefined;
+    }
+}
+
+
+class MapIterator<T, U> {
+
+    private iterator:FunzoIterator<T>;
+
+    private data:Array<T>;
+
+    private mapFn:(T)=>U;
+
+    private filterFn:(T)=>boolean;
+
+
+    constructor(data:Array<T>, filterFn:(T)=>boolean, mapFn:(T)=>U) {
+        this.iterator = new FunzoIterator<T>(data, filterFn);
+        this.mapFn = mapFn;
+        this.filterFn = filterFn;
+    }
+
+    next():U {
+        return this.mapFn(this.iterator.next());
+    }
+
+    hasNext():boolean {
+        return this.iterator.hasNext();
+    }
+}
+
+export class DataModifier<T> {
+
+    private data:Array<T>;
+
+    private accessorFn:(T)=>number;
+
+    private filterFn:(T)=>boolean;
+
+    constructor(accessorFn:(T)=>number, filterFn:(T)=>boolean, data:Array<T>) {
+        this.accessorFn = accessorFn;
+        this.filterFn = filterFn;
+        this.data = data;
+    }
+
+    swap(i1:number, i2:number):void {
+        if (i1 === i2) {
+            return;
+
+        } else if (!this.filterFn) {
+            [this.data[i1], this.data[i2]] = [this.data[i2], this.data[i1]];
+
+        } else {
+            if (i1 > i2) {
+                [i1, i2] = [i2, i1];
+            }
+            let r1 = null, r2 = null;
+            let tmp = 0;
+            for (let i = 0; i < this.data.length; i += 1) {
+                if (this.filterFn(this.data[i])) {
+                    if (tmp === i1) {
+                        r1 = i;
+                    }
+                    if (tmp === i2) {
+                        r2 = i;
+                    }
+                    if (r1 !== null && r2 !== null) {
+                        [this.data[r1], this.data[r2]] = [this.data[r2], this.data[r1]];
+                        break;
+                    }
+                    tmp += 1;
+                }
+            }
+        }
+    }
+}
+
 /**
  * A core implementation of Processable
  */
@@ -46,9 +176,16 @@ class FunzoList<T> implements Processable {
 
     private accessorFunc:(T)=>number;
 
-    constructor(accessorFunc:(T)=>number, data:Array<T>) {
+    private filterFunc:(T)=>boolean;
+
+    constructor(accessorFunc:(T)=>number, filterFunc:(T)=>boolean, data:Array<T>) {
         this.accessorFunc = accessorFunc;
+        this.filterFunc = filterFunc;
         this.data = data;
+    }
+
+    public createIterator():MapIterator<T, number> {
+        return new MapIterator<T, number>(this.data, this.filterFunc, this.accessorFunc);
     }
 
     toString():string {
@@ -56,19 +193,44 @@ class FunzoList<T> implements Processable {
     }
 
     size():number {
-        return this.data.length;
+        if (!this.filterFunc) {
+            return this.data.length;
+
+        } else {
+            let i = 0;
+            let iter = this.createIterator();
+            while (iter.hasNext()) {
+                iter.next();
+                i += 1;
+            }
+            return i;
+        }
     }
 
     get(idx:number):number {
-        return this.accessorFunc(this.data[idx]);
-    }
+        if (!this.filterFunc) {
+            return this.accessorFunc(this.data[idx]);
 
-    set(idx:number, v:T):void {
-        this.data[idx] = v;
+        } else {
+            let i = 0;
+            let tmp:T;
+            for (let i2 = 0; i2 < this.data.length; i2 += 1) {
+                tmp = this.data[i2];
+                if (this.filterFunc(tmp)) {
+                    if (i === idx) {
+                        return this.accessorFunc(tmp);
+                    }
+                    i += 1;
+                }
+            }
+            return undefined;
+        }
     }
 
     toArray():Array<number> {
-        return this.data.map(this.accessorFunc);
+        return this.data
+                .filter(this.filterFunc ? this.filterFunc : (x)=>true)
+                .map(this.accessorFunc);
     }
 
     /**
@@ -78,10 +240,26 @@ class FunzoList<T> implements Processable {
      * @param {function} fn a function with signature function (value, index)
      */
     each(fn:(v:number, i:number)=>any) {
-        for (let i = 0; i < this.data.length; i += 1) {
-            if (fn.call(this, this.get(i), i) === false) {
+        let iter:MapIterator<T, number> = this.createIterator();
+        let i = 0;
+        while (iter.hasNext()) {
+            if (fn.call(this, iter.next(), i) === false) {
                 break;
             }
+            i += 1;
+        }
+    }
+
+    private walkThrough(fn:(v:number, i:number)=>any) {
+        let iter:MapIterator<T, number> = this.createIterator();
+        let i = 0;
+        let ans;
+        while (iter.hasNext()) {
+            ans = fn(iter.next(), i);
+            if (ans === false) {
+                break;
+            }
+            i += 1;
         }
     }
 
@@ -93,13 +271,13 @@ class FunzoList<T> implements Processable {
      sum():number {
         let total:number = 0;
 
-        for (let i = 0; i < this.size(); i += 1) {
-            let x = this.get(i);
+        this.walkThrough((x:number, i:number) => {
             if (typeof x !== 'number') {
-                return NaN;
+                total = NaN;
+                return false;
             }
             total += x;
-        }
+        });
         return total;
     }
 
@@ -112,15 +290,15 @@ class FunzoList<T> implements Processable {
     max():number {
         let maxVal = this.get(0);
 
-        for (let i = 1; i < this.size(); i += 1) {
-            let x = this.get(i);
+        this.walkThrough((x:number, i:number) => {
             if (typeof x !== 'number') {
-                return NaN;
+                maxVal = NaN;
+                return false;
 
             } else if (x > maxVal) {
                 maxVal = x;
             }
-        }
+        });
         return maxVal;
     }
 
@@ -133,16 +311,29 @@ class FunzoList<T> implements Processable {
     min():number {
         let minVal = this.get(0);
 
-        for (let i = 1; i < this.size(); i += 1) {
-            let x = this.get(i);
-            if (typeof x !== 'number') {
-                return NaN;
+        this.walkThrough((x:number, i:number) => {
+                if (typeof x !== 'number') {
+                    minVal = NaN;
+                    return false;
 
-            } else if (x < minVal) {
-                minVal = x;
-            }
-        }
+                } else if (x < minVal) {
+                    minVal = x;
+                }
+        });
         return minVal;
+    }
+
+    private meanAndSize():{mean:number; size:number} {
+        let total = 0;
+        let num = 0;
+        this.walkThrough((v:number, i:number) => {
+            num += 1;
+            total += v;
+        });
+        if (num > 0) {
+            return {mean: total / num, size: num };
+        }
+        return {mean: NaN, size: num};
     }
 
     /**
@@ -150,10 +341,7 @@ class FunzoList<T> implements Processable {
      *
      */
     mean():number {
-        if (this.size() > 0) {
-            return this.sum() / this.size();
-        }
-        return NaN;
+        return this.meanAndSize().mean;
     }
 
     /**
@@ -163,13 +351,13 @@ class FunzoList<T> implements Processable {
      * the value cannot be calculated
      */
     stdev():number {
-        let mean = this.mean();
+        let {mean, size} = this.meanAndSize();
         let curr = 0;
         if (!isNaN(mean) && this.size() > 1) {
-            for (let i = 0; i < this.size(); i += 1) {
-                curr += (this.get(i) - mean) * (this.get(i) - mean);
-            }
-            return Math.sqrt(curr / (this.size() - 1));
+            this.walkThrough((v:number, i:number) => {
+                curr += (v - mean) * (v - mean);
+            });
+            return Math.sqrt(curr / (size - 1));
         }
         return NaN;
     }
@@ -192,19 +380,34 @@ class FunzoList<T> implements Processable {
             throw new Error('Please apply map() to the argument');
         }
 
-        if (this.size() === otherData.size()) {
-            let m1 = this.mean();
-            let m2 = otherData.mean();
-            for (let i = 0; i < len; i += 1) {
-                numerator += (this.get(i) - m1) * (otherData.get(i) - m2);
-                denominator1 += (this.get(i) - m1) * (this.get(i) - m1);
-                denominator2 += (otherData.get(i) - m2) * (otherData.get(i) - m2);
-            }
-            return numerator / Math.sqrt((denominator1 * denominator2));
+        let iter1 = this.createIterator();
+        let iter2 = otherData.createIterator();
+        let m1 = 0;
+        let m2 = 0;
+        let numItems = 0;
+        let v1;
+        let v2;
 
-        } else {
-            return NaN;
+        while (iter1.hasNext() && iter2.hasNext()) {
+            v1 = iter1.next();
+            v2 = iter2.next();
+            m1 += v1;
+            m2 += v2;
+            numItems += 1;
         }
+        m1 /= numItems;
+        m2 /= numItems;
+
+        iter1 = this.createIterator();
+        iter2 = otherData.createIterator();
+        while (iter1.hasNext() && iter2.hasNext()) {
+            v1 = iter1.next();
+            v2 = iter2.next();
+            numerator += (v1 - m1) * (v2 - m2);
+            denominator1 += (v1 - m1) * (v1 - m1);
+            denominator2 += (v2 - m2) * (v2 - m2);
+        }
+        return numerator / Math.sqrt((denominator1 * denominator2));
     }
 
     /**
@@ -222,24 +425,20 @@ class FunzoList<T> implements Processable {
             return NaN;
         }
 
-        function swap(i, j) {
-            let tmp = self.data[i];
-            self.data[i] = self.data[j];
-            self.data[j] = tmp;
-        }
+        let modifier = new DataModifier(this.accessorFunc, this.filterFunc, this.data);
 
         function partition(left, right, pivotIdx):number {
             let pivotValue = self.get(pivotIdx);
             let realPivotIdx = left;
 
-            swap(pivotIdx, right);
+            modifier.swap(pivotIdx, right);
             for (let i = left; i <= right; i += 1) {
                 if (self.get(i) < pivotValue) {
-                    swap(i, realPivotIdx);
+                    modifier.swap(i, realPivotIdx);
                     realPivotIdx += 1;
                 }
             }
-            swap(right, realPivotIdx);
+            modifier.swap(right, realPivotIdx);
             return realPivotIdx;
         }
 
@@ -265,6 +464,7 @@ class FunzoList<T> implements Processable {
                 }
             }
         }
+
         let halfIdx = Math.floor(self.size() / 2);
         let m = quickSelect(halfIdx);
         let m2;
@@ -310,8 +510,11 @@ export class FunzoData<T> {
 
     private data:Array<T>;
 
-    constructor(data:Array<T>) {
+    private filterFn:((v:T)=>boolean);
+
+    constructor(data:Array<T>, filter?:(v:T)=>boolean) {
         this.data = data;
+        this.filterFn = filter ? filter : null;
     }
 
     /**
@@ -319,7 +522,24 @@ export class FunzoData<T> {
      * data set (i.e. the set where all the stat. functions are available).
      */
     map(fn?:(v:T)=>number):Processable {
-        return new FunzoList<T>(fn ? fn : (x) => x, this.data);
+        return new FunzoList<T>(fn ? fn : (x) => x, this.filterFn, this.data);
+    }
+
+    /**
+     *
+     */
+    filter(fn?:(v:T)=>boolean):FunzoData<T> {
+        let newFilter:(v:T)=>boolean;
+
+        if (this.filterFn) {
+            newFilter = (v:T) => {
+                return this.filterFn(v) && fn(v);
+            };
+
+        } else {
+            newFilter = fn;
+        }
+        return new FunzoData(this.data, newFilter);
     }
 
     /**
@@ -338,7 +558,7 @@ export class FunzoData<T> {
                 return fallbackValue;
             }
         }
-        return new FunzoList<T>(convert, this.data);
+        return new FunzoList<T>(convert, this.filterFn, this.data);
     }
 
     round(places:number):Processable {
@@ -346,7 +566,7 @@ export class FunzoData<T> {
             return parseFloat(v.toFixed(places));
         }
         // int terms of types this is actually wrong (number vs. T)
-        return new FunzoList<T>(convert, this.data);
+        return new FunzoList<T>(convert, this.filterFn, this.data);
     }
 
     sample(size:number):FunzoData<T> {
@@ -390,7 +610,7 @@ export class FunzoData<T> {
         for (let p in probs) {
             ans.push(probs[p] / this.data.length);
         }
-        return new FunzoList<T>((x)=>x, ans);
+        return new FunzoList<T>((x)=>x, null, ans); // no need to pass filter (already applied)
     }
 }
 
@@ -449,5 +669,5 @@ export function Funzo<T>(data:Array<T>):FunzoData<T> {
 }
 
 export function wrapArray<T>(data:Array<T>, accessorFunc?:(T)=>number):Processable {
-    return new FunzoList<T>(accessorFunc ? accessorFunc : (x)=>x, data);
+    return new FunzoList<T>(accessorFunc ? accessorFunc : (x)=>x, null, data);
 }

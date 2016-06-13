@@ -628,22 +628,21 @@ export class FunzoJointData {
         this.list2 = list2;
     }
 
-    /**
-     * Mutual information
-     */
     mi(base:number) {
         let probs12 = Object.create(null);
         let probs1 = Object.create(null);
         let probs2 = Object.create(null);
-        let limit = Math.min(this.list1.size(), this.list2.size());
-
-        for (let i = 0; i < limit; i += 1) {
-            let v1 = String(this.list1.get(i));
-            let v2 = String(this.list2.get(i));
+        let iter1 = this.list1.createIterator();
+        let iter2 = this.list2.createIterator();
+        let total = 0;
+        while (iter1.hasNext() && iter2.hasNext()) {
+            let v1 = String(iter1.next());
+            let v2 = String(iter2.next());
             let v1v2 = v1 + ':' + v2;
             probs12[v1v2] = probs12[v1v2] !== undefined ? probs12[v1v2] + 1 : 1;
             probs1[v1] = probs1[v1] !== undefined ? probs1[v1] + 1 : 1;
             probs2[v2] = probs2[v2] !== undefined ? probs2[v2] + 1 : 1;
+            total += 1;
         }
         let ans = 0;
         let pairs = Object.keys(probs12);
@@ -651,7 +650,7 @@ export class FunzoJointData {
             let vals = pairs[i].split(':');
             ans += probs12[pairs[i]] / pairs.length
                     * Math.log( (probs12[pairs[i]] / pairs.length) /
-                            ( (probs1[vals[0]] / limit) * (probs2[vals[1]] / limit) )
+                            ( (probs1[vals[0]] / total) * (probs2[vals[1]] / total) )
                       );
         }
         return ans / Math.log(base);

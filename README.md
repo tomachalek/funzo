@@ -1,21 +1,66 @@
 # Funzo - a bunch of core descriptive statistics (and related) functions
 
-## Available interfaces
+Funzo wraps an array of arbitrary items and provides functions to calculate
+their basic statistical properties:
 
+  * sum
+  * maximum value
+  * minimum value
+  * mean
+  * median
+  * standard deviation
+  * entropy.
+
+It can also calculate some properties describing a relationship between
+two data sets:
+
+  * correlation
+  * mutual information.
+
+It is designed to prefer memory savings over array access complexity.
+You can filter your data multiple times:
+
+```js
+Funzo(data)
+    .filter(x => x > 0)
+    .filter(x => x % 2 === 0)
+    .map()
+    .mean()
+```
+
+and yet there will be no subsets of the original array in RAM. Funzo
+filters data in a lazy way which makes it suitable for sequential processing
+(it is what aggregation functions actually do) but random access time
+complexity is *O(n)*.
+
+Funzo comes with *d.ts* TypeScript declaration file which makes
+writing code much easier when using a compatible editor (VScode, Atom,
+WebStorm,...).
+
+```js
+/// <reference path="/path/to/funzo.d.ts" />
+```
+
+
+## Available interfaces
 
 ### FunzoData type (a wrapper for processed data)
 
+*FunzoData* represents a wrapper for raw user data with structured
+items of different types, including items we have to filter out. Some
+*FunzoData* methods produce other *FunzoData* but most of them
+return *Processable* type (see below) which represent a cleaned data.
+
+* **filter**(fn:(v:T)=&gt;boolean):FunzoData
+* **sample**(size:number):FunzoData
 * **map**(fn?:(v:T)=&gt;number):Processable
 * **numerize**():Processable
 * **round**(places):Processable
-* **sample**(size:number):FunzoData
 * **probs**(key?:(v:any)=&gt;string):Processable
 
-### FunzoJointData
-
-* **mi**(base:number):number - Mutual information
-
 ### Processable type (a processable variant of FunzoData)
+
+*Processable* type represents cleaned data.
 
 * **get**(idx:number):number
 * **each**(fn:(v:number, i:number)=&gt;any)
@@ -30,6 +75,13 @@
 * **median**():number
 * **entropy**(base:number):number
 * **joint**(otherData:Processable):FunzoJointData
+
+
+### FunzoJointData
+
+This type is used for joint probabilities.
+
+* **mi**(base:number):number - Mutual information
 
 
 ## How to use Funzo
@@ -140,5 +192,3 @@ let wrapArray = require('funzo').wrapArray;
 
 let mean = wrapArray([{v: 1}, {v: 2}, {v: 3}, {v: 4}, {v: 5}], (x)=>x.v).stdev();
 ```
-
-**Caution**: Please note that the API is in initial phase and thus may change here and there.

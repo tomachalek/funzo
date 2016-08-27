@@ -45,7 +45,13 @@ export interface Processable {
 }
 
 
-class FunzoIterator<T> implements Iterator<T> {
+/**
+ * An iterator which is able to skip elements
+ * based on provided filter function. It is
+ * the cornerstone of lazily processed arrays
+ * in Funzo.
+ */
+class SkippingIterator<T> implements Iterator<T> {
 
     private data:Array<T>;
 
@@ -82,7 +88,7 @@ class FunzoIterator<T> implements Iterator<T> {
     }
 
     next():T {
-        let ans = this.findNextMatch(true);
+        const ans = this.findNextMatch(true);
         if (ans !== undefined) {
             this.i += 1;
         }
@@ -94,10 +100,13 @@ class FunzoIterator<T> implements Iterator<T> {
     }
 }
 
-
+/**
+ * An iterator providing lazily processed array of values T
+ * wrapping a value U we actually care about.
+ */
 class MapIterator<T, U> {
 
-    private iterator:FunzoIterator<T>;
+    private iterator:SkippingIterator<T>;
 
     private data:Array<T>;
 
@@ -107,7 +116,7 @@ class MapIterator<T, U> {
 
 
     constructor(data:Array<T>, filterFn:(T)=>boolean, mapFn:(T)=>U) {
-        this.iterator = new FunzoIterator<T>(data, filterFn);
+        this.iterator = new SkippingIterator<T>(data, filterFn);
         this.mapFn = mapFn;
         this.filterFn = filterFn;
     }
@@ -121,6 +130,9 @@ class MapIterator<T, U> {
     }
 }
 
+/**
+ * An object used to modify a lazily filtered array.
+ */
 export class DataModifier<T> {
 
     private data:Array<T>;
@@ -198,7 +210,7 @@ class FunzoList<T> implements Processable {
 
         } else {
             let i = 0;
-            let iter = this.createIterator();
+            const iter = this.createIterator();
             while (iter.hasNext()) {
                 iter.next();
                 i += 1;
@@ -237,10 +249,10 @@ class FunzoList<T> implements Processable {
      * Iterates over data and applies passed function.
      * To break the iteration function must return false.
      *
-     * @param {function} fn a function with signature function (value, index)
+     * @param fn - a function applied to each item
      */
     each(fn:(v:number, i:number)=>any) {
-        let iter:MapIterator<T, number> = this.createIterator();
+        const iter:MapIterator<T, number> = this.createIterator();
         let i = 0;
         while (iter.hasNext()) {
             if (fn.call(this, iter.next(), i) === false) {
@@ -251,7 +263,7 @@ class FunzoList<T> implements Processable {
     }
 
     private walkThrough(fn:(v:number, i:number)=>any) {
-        let iter:MapIterator<T, number> = this.createIterator();
+        const iter:MapIterator<T, number> = this.createIterator();
         let i = 0;
         let ans;
         while (iter.hasNext()) {
@@ -351,7 +363,7 @@ class FunzoList<T> implements Processable {
      * the value cannot be calculated
      */
     stdev():number {
-        let {mean, size} = this.meanAndSize();
+        const {mean, size} = this.meanAndSize();
         let curr = 0;
         if (!isNaN(mean) && this.size() > 1) {
             this.walkThrough((v:number, i:number) => {
@@ -577,8 +589,8 @@ export class FunzoData<T> {
             throw new Error('Sample size must be between zero and the size of the dataset');
         }
         for (let i = 0; i < size; i += 1) {
-            let randIdx = randomInt(i, this.data.length);
-            let tmp = this.data[i];
+            const randIdx = randomInt(i, this.data.length);
+            const tmp = this.data[i];
             this.data[i] = this.data[randIdx];
             this.data[randIdx] = tmp;
         }
@@ -597,8 +609,8 @@ export class FunzoData<T> {
      * @param key a function mapping from an original value to item identifier
      */
     probs(key?:(v:any)=>string):Processable {
-        let probs = Object.create(null);
-        let ans = [];
+        const probs = Object.create(null);
+        const ans = [];
         let item;
         if (key === undefined) {
             key = (x) => x;
@@ -629,11 +641,11 @@ export class FunzoJointData {
     }
 
     mi(base:number) {
-        let probs12 = Object.create(null);
-        let probs1 = Object.create(null);
-        let probs2 = Object.create(null);
-        let iter1 = this.list1.createIterator();
-        let iter2 = this.list2.createIterator();
+        const probs12 = Object.create(null);
+        const probs1 = Object.create(null);
+        const probs2 = Object.create(null);
+        const iter1 = this.list1.createIterator();
+        const iter2 = this.list2.createIterator();
         let total = 0;
         while (iter1.hasNext() && iter2.hasNext()) {
             let v1 = String(iter1.next());

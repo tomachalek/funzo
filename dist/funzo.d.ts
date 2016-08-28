@@ -1,3 +1,7 @@
+export interface Iterator<T> {
+    hasNext(): boolean;
+    next(): T;
+}
 /**
  * An abstract interface specifying
  * all the available statistical functions.
@@ -6,6 +10,7 @@ export interface Processable {
     get(idx: number): number;
     each(fn: (v: number, i: number) => any): any;
     toArray(): Array<number>;
+    createIterator(): Iterator<number>;
     size(): number;
     sum(): number;
     max(): number;
@@ -18,16 +23,35 @@ export interface Processable {
     correl<U>(otherData: Processable): number;
 }
 /**
+ * An object used to modify a lazily filtered array.
+ */
+export declare class DataModifier<T> {
+    private data;
+    private accessorFn;
+    private filterFn;
+    constructor(accessorFn: (T) => number, filterFn: (T) => boolean, data: Array<T>);
+    /**
+     * Swap two elements with indices i1 and i2.
+     */
+    swap(i1: number, i2: number): void;
+    toArray(): Array<T>;
+}
+/**
  * A wrapper object providing access to data manipulation.
  */
 export declare class FunzoData<T> {
     private data;
-    constructor(data: Array<T>);
+    private filterFn;
+    constructor(data: Array<T>, filter?: (v: T) => boolean);
     /**
      * This is an essential function providing access to Processable
      * data set (i.e. the set where all the stat. functions are available).
      */
     map(fn?: (v: T) => number): Processable;
+    /**
+     *
+     */
+    filter(fn?: (v: T) => boolean): FunzoData<T>;
     /**
      * A helper accessor function which always produces numbers
      * (number => number, string => parsed number, null/none/object => zero)
@@ -55,9 +79,6 @@ export declare class FunzoJointData {
     private list1;
     private list2;
     constructor(list1: Processable, list2: Processable);
-    /**
-     * Mutual information
-     */
     mi(base: number): number;
 }
 /**

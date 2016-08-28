@@ -135,25 +135,52 @@ describe('FunzoData.filter()', function () {
 
 describe('DataModifier', function () {
 
-    it('test simple', function () {
+    it('test simple access', function () {
+        let items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let dm = new DataModifier(x => x, x => true, items);
+        dm.swap(0, 9);
+        chai.assert.deepEqual(Funzo(items).map().toArray(), [9, 1, 2, 3, 4, 5, 6, 7, 8, 0]);
+    });
+
+    it ('test multiple swaps on filtered array', function () {
         let items = [1, -3, 2, -4, 3, -5, 4, -6, 5, -7];
         let filter = x => x >= 0;
 
         let dm = new DataModifier(x=>x, filter, items);
-        dm.swap(0, 4);
+        for (let i = 0; i < items.filter(filter).length - 1; i += 1) {
+            dm.swap(i, i + 1);
+        }
         let fd = Funzo(items).filter(filter);
-        chai.assert.deepEqual(fd.map().toArray(), [5, 2, 3, 4, 1]);
+        chai.assert.deepEqual(fd.map().toArray(), [2, 3, 4, 5, 1]);
     });
 
+    it ('test invalid index', function () {
+        let items = [0, 1, 2, 3, 4];
+
+        let dm = new DataModifier(x=>x, x=>true, items);
+        chai.assert.throws(function () {
+            dm.swap(0, 16);
+        });
+    });
 
     it ('test empty', function () {
         let items = [];
         let filter = x => x >= 0;
 
         let dm = new DataModifier(x=>x, filter, items);
-        dm.swap(0, 4);
-        let fd = Funzo(items).filter(filter);
-        chai.assert.deepEqual(fd.map().toArray(), []);
+        chai.assert.throws(function () {
+            dm.swap(0, 4);
+        });
+    });
+
+    it ('test null swap with invalid index', function () {
+        let items = [1, 2, 3, 4, 5];
+        let filter = x => x >= 1;
+
+        let dm = new DataModifier(x=>x, filter, items);
+        chai.assert.doesNotThrow(function () {
+            dm.swap(100, 100);
+        }, Error);
     });
 
 });

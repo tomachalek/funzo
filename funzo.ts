@@ -147,12 +147,20 @@ export class DataModifier<T> {
         this.data = data;
     }
 
+    /**
+     * Swap two elements with indices i1 and i2.
+     */
     swap(i1:number, i2:number):void {
         if (i1 === i2) {
             return;
 
         } else if (!this.filterFn) {
-            [this.data[i1], this.data[i2]] = [this.data[i2], this.data[i1]];
+            if (i1 < this.data.length && i2 < this.data.length) {
+                [this.data[i1], this.data[i2]] = [this.data[i2], this.data[i1]];
+
+            } else {
+                throw new Error('Invalid index');
+            }
 
         } else {
             if (i1 > i2) {
@@ -175,7 +183,14 @@ export class DataModifier<T> {
                     tmp += 1;
                 }
             }
+            if (r1 === null || r2 === null) {
+                throw new Error('Invalid index');
+            }
         }
+    }
+
+    toArray():Array<T> {
+        return this.data.filter(this.filterFn);
     }
 }
 

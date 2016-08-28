@@ -15,39 +15,202 @@
  */
 "use strict";
 /**
+ * An iterator which is able to skip elements
+ * based on provided filter function. It is
+ * the cornerstone of lazily processed arrays
+ * in Funzo.
+ */
+var SkippingIterator = (function () {
+    function SkippingIterator(data, filterFn) {
+        this.data = data;
+        this.filterFn = filterFn;
+        this.i = 0;
+        this.internalIdx = -1;
+    }
+    SkippingIterator.prototype.findNextMatch = function (updateInternalPointer) {
+        if (updateInternalPointer === void 0) { updateInternalPointer = false; }
+        var i = this.internalIdx + 1;
+        var tmp = this.data[i];
+        var ans = undefined;
+        while (i < this.data.length) {
+            tmp = this.data[i];
+            if (!this.filterFn || this.filterFn(tmp)) {
+                ans = tmp;
+                break;
+            }
+            i += 1;
+        }
+        if (updateInternalPointer) {
+            this.internalIdx = i;
+        }
+        return ans;
+    };
+    SkippingIterator.prototype.next = function () {
+        var ans = this.findNextMatch(true);
+        if (ans !== undefined) {
+            this.i += 1;
+        }
+        return ans;
+    };
+    SkippingIterator.prototype.hasNext = function () {
+        return this.findNextMatch() !== undefined;
+    };
+    return SkippingIterator;
+}());
+/**
+ * An iterator providing lazily processed array of values T
+ * wrapping a value U we actually care about.
+ */
+var MapIterator = (function () {
+    function MapIterator(data, filterFn, mapFn) {
+        this.iterator = new SkippingIterator(data, filterFn);
+        this.mapFn = mapFn;
+        this.filterFn = filterFn;
+    }
+    MapIterator.prototype.next = function () {
+        return this.mapFn(this.iterator.next());
+    };
+    MapIterator.prototype.hasNext = function () {
+        return this.iterator.hasNext();
+    };
+    return MapIterator;
+}());
+/**
+ * An object used to modify a lazily filtered array.
+ */
+var DataModifier = (function () {
+    function DataModifier(accessorFn, filterFn, data) {
+        this.accessorFn = accessorFn;
+        this.filterFn = filterFn;
+        this.data = data;
+    }
+    /**
+     * Swap two elements with indices i1 and i2.
+     */
+    DataModifier.prototype.swap = function (i1, i2) {
+        if (i1 === i2) {
+            return;
+        }
+        else if (!this.filterFn) {
+            if (i1 < this.data.length && i2 < this.data.length) {
+                _a = [this.data[i2], this.data[i1]], this.data[i1] = _a[0], this.data[i2] = _a[1];
+            }
+            else {
+                throw new Error('Invalid index');
+            }
+        }
+        else {
+            if (i1 > i2) {
+                _b = [i2, i1], i1 = _b[0], i2 = _b[1];
+            }
+            var r1 = null, r2 = null;
+            var tmp = 0;
+            for (var i = 0; i < this.data.length; i += 1) {
+                if (this.filterFn(this.data[i])) {
+                    if (tmp === i1) {
+                        r1 = i;
+                    }
+                    if (tmp === i2) {
+                        r2 = i;
+                    }
+                    if (r1 !== null && r2 !== null) {
+                        _c = [this.data[r2], this.data[r1]], this.data[r1] = _c[0], this.data[r2] = _c[1];
+                        break;
+                    }
+                    tmp += 1;
+                }
+            }
+            if (r1 === null || r2 === null) {
+                throw new Error('Invalid index');
+            }
+        }
+        var _a, _b, _c;
+    };
+    DataModifier.prototype.toArray = function () {
+        return this.data.filter(this.filterFn);
+    };
+    return DataModifier;
+}());
+exports.DataModifier = DataModifier;
+/**
  * A core implementation of Processable
  */
 var FunzoList = (function () {
-    function FunzoList(accessorFunc, data) {
+    function FunzoList(accessorFunc, filterFunc, data) {
         this.accessorFunc = accessorFunc;
+        this.filterFunc = filterFunc;
         this.data = data;
     }
+    FunzoList.prototype.createIterator = function () {
+        return new MapIterator(this.data, this.filterFunc, this.accessorFunc);
+    };
     FunzoList.prototype.toString = function () {
         return '[object FunzoList]';
     };
     FunzoList.prototype.size = function () {
-        return this.data.length;
+        if (!this.filterFunc) {
+            return this.data.length;
+        }
+        else {
+            var i = 0;
+            var iter = this.createIterator();
+            while (iter.hasNext()) {
+                iter.next();
+                i += 1;
+            }
+            return i;
+        }
     };
     FunzoList.prototype.get = function (idx) {
-        return this.accessorFunc(this.data[idx]);
-    };
-    FunzoList.prototype.set = function (idx, v) {
-        this.data[idx] = v;
+        if (!this.filterFunc) {
+            return this.accessorFunc(this.data[idx]);
+        }
+        else {
+            var i = 0;
+            var tmp = void 0;
+            for (var i2 = 0; i2 < this.data.length; i2 += 1) {
+                tmp = this.data[i2];
+                if (this.filterFunc(tmp)) {
+                    if (i === idx) {
+                        return this.accessorFunc(tmp);
+                    }
+                    i += 1;
+                }
+            }
+            return undefined;
+        }
     };
     FunzoList.prototype.toArray = function () {
-        return this.data.map(this.accessorFunc);
+        return this.data
+            .filter(this.filterFunc ? this.filterFunc : function (x) { return true; })
+            .map(this.accessorFunc);
     };
     /**
      * Iterates over data and applies passed function.
      * To break the iteration function must return false.
      *
-     * @param {function} fn a function with signature function (value, index)
+     * @param fn - a function applied to each item
      */
     FunzoList.prototype.each = function (fn) {
-        for (var i = 0; i < this.data.length; i += 1) {
-            if (fn.call(this, this.get(i), i) === false) {
+        var iter = this.createIterator();
+        var i = 0;
+        while (iter.hasNext()) {
+            if (fn.call(this, iter.next(), i) === false) {
                 break;
             }
+            i += 1;
+        }
+    };
+    FunzoList.prototype.walkThrough = function (fn) {
+        var iter = this.createIterator();
+        var i = 0;
+        var ans;
+        while (iter.hasNext()) {
+            ans = fn(iter.next(), i);
+            if (ans === false) {
+                break;
+            }
+            i += 1;
         }
     };
     /**
@@ -57,13 +220,13 @@ var FunzoList = (function () {
      */
     FunzoList.prototype.sum = function () {
         var total = 0;
-        for (var i = 0; i < this.size(); i += 1) {
-            var x = this.get(i);
+        this.walkThrough(function (x, i) {
             if (typeof x !== 'number') {
-                return NaN;
+                total = NaN;
+                return false;
             }
             total += x;
-        }
+        });
         return total;
     };
     /**
@@ -74,15 +237,15 @@ var FunzoList = (function () {
      */
     FunzoList.prototype.max = function () {
         var maxVal = this.get(0);
-        for (var i = 1; i < this.size(); i += 1) {
-            var x = this.get(i);
+        this.walkThrough(function (x, i) {
             if (typeof x !== 'number') {
-                return NaN;
+                maxVal = NaN;
+                return false;
             }
             else if (x > maxVal) {
                 maxVal = x;
             }
-        }
+        });
         return maxVal;
     };
     /**
@@ -93,26 +256,35 @@ var FunzoList = (function () {
      */
     FunzoList.prototype.min = function () {
         var minVal = this.get(0);
-        for (var i = 1; i < this.size(); i += 1) {
-            var x = this.get(i);
+        this.walkThrough(function (x, i) {
             if (typeof x !== 'number') {
-                return NaN;
+                minVal = NaN;
+                return false;
             }
             else if (x < minVal) {
                 minVal = x;
             }
-        }
+        });
         return minVal;
+    };
+    FunzoList.prototype.meanAndSize = function () {
+        var total = 0;
+        var num = 0;
+        this.walkThrough(function (v, i) {
+            num += 1;
+            total += v;
+        });
+        if (num > 0) {
+            return { mean: total / num, size: num };
+        }
+        return { mean: NaN, size: num };
     };
     /**
      * Calculates arithmetic mean of provided numbers
      *
      */
     FunzoList.prototype.mean = function () {
-        if (this.size() > 0) {
-            return this.sum() / this.size();
-        }
-        return NaN;
+        return this.meanAndSize().mean;
     };
     /**
      * Calculates standard deviation of the sample
@@ -121,13 +293,13 @@ var FunzoList = (function () {
      * the value cannot be calculated
      */
     FunzoList.prototype.stdev = function () {
-        var mean = this.mean();
+        var _a = this.meanAndSize(), mean = _a.mean, size = _a.size;
         var curr = 0;
         if (!isNaN(mean) && this.size() > 1) {
-            for (var i = 0; i < this.size(); i += 1) {
-                curr += (this.get(i) - mean) * (this.get(i) - mean);
-            }
-            return Math.sqrt(curr / (this.size() - 1));
+            this.walkThrough(function (v, i) {
+                curr += (v - mean) * (v - mean);
+            });
+            return Math.sqrt(curr / (size - 1));
         }
         return NaN;
     };
@@ -147,19 +319,32 @@ var FunzoList = (function () {
         if (otherData instanceof FunzoData) {
             throw new Error('Please apply map() to the argument');
         }
-        if (this.size() === otherData.size()) {
-            var m1 = this.mean();
-            var m2 = otherData.mean();
-            for (var i = 0; i < len; i += 1) {
-                numerator += (this.get(i) - m1) * (otherData.get(i) - m2);
-                denominator1 += (this.get(i) - m1) * (this.get(i) - m1);
-                denominator2 += (otherData.get(i) - m2) * (otherData.get(i) - m2);
-            }
-            return numerator / Math.sqrt((denominator1 * denominator2));
+        var iter1 = this.createIterator();
+        var iter2 = otherData.createIterator();
+        var m1 = 0;
+        var m2 = 0;
+        var numItems = 0;
+        var v1;
+        var v2;
+        while (iter1.hasNext() && iter2.hasNext()) {
+            v1 = iter1.next();
+            v2 = iter2.next();
+            m1 += v1;
+            m2 += v2;
+            numItems += 1;
         }
-        else {
-            return NaN;
+        m1 /= numItems;
+        m2 /= numItems;
+        iter1 = this.createIterator();
+        iter2 = otherData.createIterator();
+        while (iter1.hasNext() && iter2.hasNext()) {
+            v1 = iter1.next();
+            v2 = iter2.next();
+            numerator += (v1 - m1) * (v2 - m2);
+            denominator1 += (v1 - m1) * (v1 - m1);
+            denominator2 += (v2 - m2) * (v2 - m2);
         }
+        return numerator / Math.sqrt((denominator1 * denominator2));
     };
     /**
      * Calculates a median of the dataset. This function
@@ -174,22 +359,18 @@ var FunzoList = (function () {
         if (this.size() === 0) {
             return NaN;
         }
-        function swap(i, j) {
-            var tmp = self.data[i];
-            self.data[i] = self.data[j];
-            self.data[j] = tmp;
-        }
+        var modifier = new DataModifier(this.accessorFunc, this.filterFunc, this.data);
         function partition(left, right, pivotIdx) {
             var pivotValue = self.get(pivotIdx);
             var realPivotIdx = left;
-            swap(pivotIdx, right);
+            modifier.swap(pivotIdx, right);
             for (var i = left; i <= right; i += 1) {
                 if (self.get(i) < pivotValue) {
-                    swap(i, realPivotIdx);
+                    modifier.swap(i, realPivotIdx);
                     realPivotIdx += 1;
                 }
             }
-            swap(right, realPivotIdx);
+            modifier.swap(right, realPivotIdx);
             return realPivotIdx;
         }
         function quickSelect(n) {
@@ -252,15 +433,32 @@ var FunzoList = (function () {
  * A wrapper object providing access to data manipulation.
  */
 var FunzoData = (function () {
-    function FunzoData(data) {
+    function FunzoData(data, filter) {
         this.data = data;
+        this.filterFn = filter ? filter : null;
     }
     /**
      * This is an essential function providing access to Processable
      * data set (i.e. the set where all the stat. functions are available).
      */
     FunzoData.prototype.map = function (fn) {
-        return new FunzoList(fn ? fn : function (x) { return x; }, this.data);
+        return new FunzoList(fn ? fn : function (x) { return x; }, this.filterFn, this.data);
+    };
+    /**
+     *
+     */
+    FunzoData.prototype.filter = function (fn) {
+        var _this = this;
+        var newFilter;
+        if (this.filterFn) {
+            newFilter = function (v) {
+                return _this.filterFn(v) && fn(v);
+            };
+        }
+        else {
+            newFilter = fn;
+        }
+        return new FunzoData(this.data, newFilter);
     };
     /**
      * A helper accessor function which always produces numbers
@@ -279,14 +477,14 @@ var FunzoData = (function () {
                 return fallbackValue;
             }
         }
-        return new FunzoList(convert, this.data);
+        return new FunzoList(convert, this.filterFn, this.data);
     };
     FunzoData.prototype.round = function (places) {
         function convert(v) {
             return parseFloat(v.toFixed(places));
         }
         // int terms of types this is actually wrong (number vs. T)
-        return new FunzoList(convert, this.data);
+        return new FunzoList(convert, this.filterFn, this.data);
     };
     FunzoData.prototype.sample = function (size) {
         function randomInt(fromNum, toNum) {
@@ -328,7 +526,7 @@ var FunzoData = (function () {
         for (var p in probs) {
             ans.push(probs[p] / this.data.length);
         }
-        return new FunzoList(function (x) { return x; }, ans);
+        return new FunzoList(function (x) { return x; }, null, ans); // no need to pass filter (already applied)
     };
     return FunzoData;
 }());
@@ -341,21 +539,21 @@ var FunzoJointData = (function () {
         this.list1 = list1;
         this.list2 = list2;
     }
-    /**
-     * Mutual information
-     */
     FunzoJointData.prototype.mi = function (base) {
         var probs12 = Object.create(null);
         var probs1 = Object.create(null);
         var probs2 = Object.create(null);
-        var limit = Math.min(this.list1.size(), this.list2.size());
-        for (var i = 0; i < limit; i += 1) {
-            var v1 = String(this.list1.get(i));
-            var v2 = String(this.list2.get(i));
+        var iter1 = this.list1.createIterator();
+        var iter2 = this.list2.createIterator();
+        var total = 0;
+        while (iter1.hasNext() && iter2.hasNext()) {
+            var v1 = String(iter1.next());
+            var v2 = String(iter2.next());
             var v1v2 = v1 + ':' + v2;
             probs12[v1v2] = probs12[v1v2] !== undefined ? probs12[v1v2] + 1 : 1;
             probs1[v1] = probs1[v1] !== undefined ? probs1[v1] + 1 : 1;
             probs2[v2] = probs2[v2] !== undefined ? probs2[v2] + 1 : 1;
+            total += 1;
         }
         var ans = 0;
         var pairs = Object.keys(probs12);
@@ -363,7 +561,7 @@ var FunzoJointData = (function () {
             var vals = pairs[i].split(':');
             ans += probs12[pairs[i]] / pairs.length
                 * Math.log((probs12[pairs[i]] / pairs.length) /
-                    ((probs1[vals[0]] / limit) * (probs2[vals[1]] / limit)));
+                    ((probs1[vals[0]] / total) * (probs2[vals[1]] / total)));
         }
         return ans / Math.log(base);
     };
@@ -380,6 +578,6 @@ function Funzo(data) {
 }
 exports.Funzo = Funzo;
 function wrapArray(data, accessorFunc) {
-    return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, data);
+    return new FunzoList(accessorFunc ? accessorFunc : function (x) { return x; }, null, data);
 }
 exports.wrapArray = wrapArray;
